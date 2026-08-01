@@ -1,17 +1,6 @@
 export default function Home() {
   return (
-    <div className="flex flex-1 flex-col bg-[#1a0f0a] text-stone-100">
-      {/* Top nav */}
-      <header className="flex items-center justify-between px-6 py-5 sm:px-12">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">🥢</span>
-          <span className="font-semibold tracking-wide">Wok Quest</span>
-        </div>
-        <span className="rounded-full border border-amber-400/30 px-4 py-1.5 text-xs font-medium text-amber-300/80">
-          Sign in — coming soon
-        </span>
-      </header>
-
+    <div className="flex flex-1 flex-col">
       {/* Hero */}
       <main className="relative flex flex-1 flex-col items-center justify-center px-6 py-16 text-center sm:px-12">
         <div
