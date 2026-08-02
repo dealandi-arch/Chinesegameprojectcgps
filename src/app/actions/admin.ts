@@ -1,9 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { Role } from "@/generated/prisma/client";
-import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
+import { createAdminClient } from "@/utils/supabase/admin";
 
 export type AdminActionResult = { error: string } | { error: null };
 
@@ -12,22 +11,36 @@ export async function setCoAdminStatus(
   makeCoAdmin: boolean
 ): Promise<AdminActionResult> {
   const currentUser = await getCurrentUser();
-  if (!currentUser || currentUser.role !== Role.ADMIN) {
+  if (!currentUser || currentUser.role !== "ADMIN") {
     return { error: "Only admins can manage co-admin status." };
   }
 
-  const target = await prisma.user.findUnique({ where: { id: userId } });
-  if (!target) {
+  const adminClient = createAdminClient();
+  const { data, error: fetchError } =
+    await adminClient.auth.admin.getUserById(userId);
+
+  if (fetchError || !data.user) {
     return { error: "That user no longer exists." };
   }
-  if (target.role === Role.ADMIN) {
+
+  const meta = data.user.app_metadata as { username?: string; role?: string };
+  if (meta.role === "ADMIN") {
     return { error: "Admins cannot be changed here." };
   }
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: { role: makeCoAdmin ? Role.CO_ADMIN : Role.USER },
-  });
+  const { error: updateError } = await adminClient.auth.admin.updateUserById(
+    userId,
+    {
+      app_metadata: {
+        ...data.user.app_metadata,
+        role: makeCoAdmin ? "CO_ADMIN" : "USER",
+      },
+    }
+  );
+
+  if (updateError) {
+    return { error: "Failed to update role. Try again." };
+  }
 
   revalidatePath("/admin");
   return { error: null };

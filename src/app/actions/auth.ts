@@ -1,10 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { Role } from "@/generated/prisma/client";
-import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/session";
-import { hashPassword, verifyPassword } from "@/lib/auth";
+import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
+import { usernameToEmail } from "@/lib/username";
 
 export type AuthFormState = { error: string } | null;
 
@@ -32,24 +31,41 @@ export async function signUp(
     return { error: "Passwords do not match." };
   }
 
-  const existing = await prisma.user.findUnique({ where: { username } });
-  if (existing) {
-    return { error: "That username is already taken." };
-  }
-
   const isAdmin = adminCode.length > 0 && adminCode === process.env.ADMIN_CODE;
+  const email = usernameToEmail(username);
 
-  const user = await prisma.user.create({
-    data: {
+  const adminClient = createAdminClient();
+  const { error: createError } = await adminClient.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    app_metadata: {
       username,
-      passwordHash: await hashPassword(password),
-      role: isAdmin ? Role.ADMIN : Role.USER,
+      role: isAdmin ? "ADMIN" : "USER",
     },
   });
 
-  const session = await getSession();
-  session.userId = user.id;
-  await session.save();
+  if (createError) {
+    if (
+      createError.status === 422 ||
+      createError.message.toLowerCase().includes("already")
+    ) {
+      return { error: "That username is already taken." };
+    }
+    return { error: "Something went wrong creating your profile. Try again." };
+  }
+
+  const supabase = await createClient();
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (signInError) {
+    return {
+      error: "Profile created, but sign-in failed. Try signing in manually.",
+    };
+  }
 
   redirect("/");
 }
@@ -61,22 +77,21 @@ export async function signIn(
   const username = String(formData.get("username") ?? "").trim();
   const password = String(formData.get("password") ?? "");
 
-  const user = await prisma.user.findUnique({ where: { username } });
-  const valid = user ? await verifyPassword(password, user.passwordHash) : false;
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithPassword({
+    email: usernameToEmail(username),
+    password,
+  });
 
-  if (!user || !valid) {
+  if (error) {
     return { error: "Incorrect username or password." };
   }
-
-  const session = await getSession();
-  session.userId = user.id;
-  await session.save();
 
   redirect("/");
 }
 
 export async function signOut() {
-  const session = await getSession();
-  session.destroy();
+  const supabase = await createClient();
+  await supabase.auth.signOut();
   redirect("/");
 }

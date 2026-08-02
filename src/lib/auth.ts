@@ -1,17 +1,6 @@
-import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/session";
-import type { Role } from "@/generated/prisma/client";
+import { createClient } from "@/utils/supabase/server";
 
-const SALT_ROUNDS = 12;
-
-export function hashPassword(password: string) {
-  return bcrypt.hash(password, SALT_ROUNDS);
-}
-
-export function verifyPassword(password: string, hash: string) {
-  return bcrypt.compare(password, hash);
-}
+export type Role = "USER" | "CO_ADMIN" | "ADMIN";
 
 export type CurrentUser = {
   id: string;
@@ -20,13 +9,21 @@ export type CurrentUser = {
 };
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
-  const session = await getSession();
-  if (!session.userId) return null;
+  const supabase = await createClient();
+  // getUser() re-validates against Supabase Auth on every call (unlike
+  // getSession()), so role changes made via the Admin API take effect
+  // immediately instead of waiting for a token refresh.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.userId },
-    select: { id: true, username: true, role: true },
-  });
+  if (!user) return null;
 
-  return user ?? null;
+  const meta = user.app_metadata as { username?: string; role?: Role };
+
+  return {
+    id: user.id,
+    username: meta.username ?? user.email?.split("@")[0] ?? "unknown",
+    role: meta.role ?? "USER",
+  };
 }

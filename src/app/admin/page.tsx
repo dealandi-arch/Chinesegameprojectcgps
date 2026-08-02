@@ -1,10 +1,9 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import type { User } from "@/generated/prisma/client";
+import { getCurrentUser, type Role } from "@/lib/auth";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { AdminUserRow } from "@/components/AdminUserRow";
 
-type UserRow = Pick<User, "id" | "username" | "role" | "createdAt">;
+const ROLE_ORDER: Record<Role, number> = { ADMIN: 0, CO_ADMIN: 1, USER: 2 };
 
 export default async function AdminPage() {
   const currentUser = await getCurrentUser();
@@ -12,10 +11,27 @@ export default async function AdminPage() {
     redirect("/");
   }
 
-  const users = await prisma.user.findMany({
-    orderBy: [{ role: "asc" }, { username: "asc" }],
-    select: { id: true, username: true, role: true, createdAt: true },
+  const adminClient = createAdminClient();
+  const { data, error } = await adminClient.auth.admin.listUsers({
+    perPage: 200,
   });
+
+  const users = (error ? [] : data.users)
+    .map((u) => {
+      const meta = u.app_metadata as { username?: string; role?: Role };
+      return {
+        id: u.id,
+        username: meta.username ?? u.email?.split("@")[0] ?? "unknown",
+        role: meta.role ?? "USER",
+        createdAt: u.created_at,
+      };
+    })
+    .sort((a, b) => {
+      if (ROLE_ORDER[a.role] !== ROLE_ORDER[b.role]) {
+        return ROLE_ORDER[a.role] - ROLE_ORDER[b.role];
+      }
+      return a.username.localeCompare(b.username);
+    });
 
   return (
     <main className="flex-1 px-6 py-12 sm:px-12">
@@ -35,13 +51,13 @@ export default async function AdminPage() {
             </tr>
           </thead>
           <tbody>
-            {users.map((u: UserRow) => (
+            {users.map((u) => (
               <AdminUserRow
                 key={u.id}
                 id={u.id}
                 username={u.username}
                 role={u.role}
-                createdAt={u.createdAt.toISOString()}
+                createdAt={u.createdAt}
               />
             ))}
           </tbody>
