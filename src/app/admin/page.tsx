@@ -1,67 +1,105 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser, type Role } from "@/lib/auth";
-import { createAdminClient } from "@/utils/supabase/admin";
+import { getCurrentUser } from "@/lib/auth";
+import { getAllUsers } from "@/lib/users";
+import {
+  getAllPacks,
+  getPendingPackEditRequests,
+  getMyPendingProposals,
+} from "@/lib/packs";
+import { getOpenRoleVotes } from "@/lib/governance";
 import { AdminUserRow } from "@/components/AdminUserRow";
-
-const ROLE_ORDER: Record<Role, number> = { ADMIN: 0, CO_ADMIN: 1, USER: 2 };
+import { GovernancePanel } from "@/components/governance/GovernancePanel";
+import { PackManager } from "@/components/packs/PackManager";
+import { PendingRequestList } from "@/components/packs/PendingRequestList";
+import { MyProposalsList } from "@/components/packs/MyProposalsList";
 
 export default async function AdminPage() {
   const currentUser = await getCurrentUser();
-  if (!currentUser || currentUser.role !== "ADMIN") {
+  if (
+    !currentUser ||
+    (currentUser.role !== "ADMIN" && currentUser.role !== "CO_ADMIN")
+  ) {
     redirect("/");
   }
 
-  const adminClient = createAdminClient();
-  const { data, error } = await adminClient.auth.admin.listUsers({
-    perPage: 200,
-  });
+  const isAdmin = currentUser.role === "ADMIN";
 
-  const users = (error ? [] : data.users)
-    .map((u) => {
-      const meta = u.app_metadata as { username?: string; role?: Role };
-      return {
-        id: u.id,
-        username: meta.username ?? u.email?.split("@")[0] ?? "unknown",
-        role: meta.role ?? "USER",
-        createdAt: u.created_at,
-      };
-    })
-    .sort((a, b) => {
-      if (ROLE_ORDER[a.role] !== ROLE_ORDER[b.role]) {
-        return ROLE_ORDER[a.role] - ROLE_ORDER[b.role];
-      }
-      return a.username.localeCompare(b.username);
-    });
+  const [users, packs, pendingRequests, openVotes, myProposals] =
+    await Promise.all([
+      getAllUsers(),
+      getAllPacks(),
+      isAdmin ? getPendingPackEditRequests() : Promise.resolve([]),
+      isAdmin ? getOpenRoleVotes() : Promise.resolve([]),
+      isAdmin ? Promise.resolve([]) : getMyPendingProposals(currentUser.id),
+    ]);
 
   return (
     <main className="flex-1 px-6 py-12 sm:px-12">
       <div className="mx-auto max-w-3xl">
-        <h1 className="text-2xl font-bold text-white">Admin Panel</h1>
+        <h1 className="text-2xl font-bold text-white">
+          {isAdmin ? "Admin Panel" : "Co-Admin Panel"}
+        </h1>
         <p className="mt-1 text-sm text-stone-400">
-          Grant or remove co-admin status for players.
+          {isAdmin
+            ? "Grant or remove co-admin status, manage pack content, and run role votes."
+            : "View players and propose pack content edits for an admin to review."}
         </p>
 
-        <table className="mt-8 w-full border-collapse">
-          <thead>
-            <tr className="border-b border-white/10 text-left text-xs uppercase tracking-wide text-stone-500">
-              <th className="pb-2 font-medium">Username</th>
-              <th className="pb-2 font-medium">Role</th>
-              <th className="pb-2 font-medium">Joined</th>
-              <th className="pb-2 font-medium text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((u) => (
-              <AdminUserRow
-                key={u.id}
-                id={u.id}
-                username={u.username}
-                role={u.role}
-                createdAt={u.createdAt}
-              />
-            ))}
-          </tbody>
-        </table>
+        <section className="mt-10">
+          <h2 className="text-lg font-semibold text-white">Users</h2>
+          <table className="mt-4 w-full border-collapse">
+            <thead>
+              <tr className="border-b border-white/10 text-left text-xs uppercase tracking-wide text-stone-500">
+                <th className="pb-2 font-medium">Username</th>
+                <th className="pb-2 font-medium">Role</th>
+                <th className="pb-2 font-medium">Joined</th>
+                <th className="pb-2 font-medium text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u) => (
+                <AdminUserRow
+                  key={u.id}
+                  id={u.id}
+                  username={u.username}
+                  role={u.role}
+                  createdAt={u.createdAt}
+                  canManage={isAdmin}
+                />
+              ))}
+            </tbody>
+          </table>
+        </section>
+
+        {isAdmin && (
+          <section className="mt-10">
+            <GovernancePanel
+              users={users}
+              openVotes={openVotes}
+              currentAdminId={currentUser.id}
+            />
+          </section>
+        )}
+
+        {isAdmin && (
+          <section className="mt-10">
+            <PendingRequestList
+              requests={pendingRequests}
+              users={users}
+              packs={packs}
+            />
+          </section>
+        )}
+
+        <section className="mt-10">
+          <PackManager mode={isAdmin ? "admin" : "propose"} packs={packs} />
+        </section>
+
+        {!isAdmin && (
+          <section className="mt-10">
+            <MyProposalsList proposals={myProposals} />
+          </section>
+        )}
       </div>
     </main>
   );

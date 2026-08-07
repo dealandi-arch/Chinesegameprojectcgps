@@ -22,11 +22,13 @@ export function AdminUserRow({
   username,
   role,
   createdAt,
+  canManage,
 }: {
   id: string;
   username: string;
   role: Role;
   createdAt: string;
+  canManage: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -53,7 +55,7 @@ export function AdminUserRow({
         {new Date(createdAt).toLocaleDateString("en-US")}
       </td>
       <td className="py-3 text-right">
-        {role === "ADMIN" ? (
+        {!canManage || role === "ADMIN" ? (
           <span className="text-xs text-stone-600">—</span>
         ) : (
           <button

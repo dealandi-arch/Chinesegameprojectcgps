@@ -21,7 +21,7 @@ export async function SiteHeader() {
       </Link>
 
       <div className="flex items-center gap-3">
-        {user?.role === "ADMIN" && (
+        {(user?.role === "ADMIN" || user?.role === "CO_ADMIN") && (
           <Link
             href="/admin"
             className="rounded-full border border-amber-400/30 px-4 py-1.5 text-xs font-medium text-amber-300/80 transition-colors hover:border-amber-400/60"
