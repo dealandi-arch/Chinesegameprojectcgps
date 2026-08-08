@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
     <div className="flex flex-1 flex-col">
@@ -23,13 +25,12 @@ export default function Home() {
         </p>
 
         <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row">
-          <button
-            disabled
-            title="The game is coming soon"
-            className="cursor-not-allowed rounded-full bg-red-600/60 px-8 py-3 text-base font-semibold text-white/80"
+          <Link
+            href="/play"
+            className="rounded-full bg-red-600 px-8 py-3 text-base font-semibold text-white transition-colors hover:bg-red-500"
           >
-            Start Cooking — Coming Soon
-          </button>
+            Duel Now!
+          </Link>
         </div>
 
         {/* Feature cards */}
