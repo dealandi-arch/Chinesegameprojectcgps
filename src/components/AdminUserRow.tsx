@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { setCoAdminStatus } from "@/app/actions/admin";
+import { demoteCoAdminToUser } from "@/app/actions/admin";
 
 type Role = "USER" | "CO_ADMIN" | "ADMIN";
 
@@ -33,10 +33,10 @@ export function AdminUserRow({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  function toggleCoAdmin() {
+  function demote() {
     setError(null);
     startTransition(async () => {
-      const result = await setCoAdminStatus(id, role !== "CO_ADMIN");
+      const result = await demoteCoAdminToUser(id);
       if (result.error) setError(result.error);
     });
   }
@@ -55,20 +55,16 @@ export function AdminUserRow({
         {new Date(createdAt).toLocaleDateString("en-US")}
       </td>
       <td className="py-3 text-right">
-        {!canManage || role === "ADMIN" ? (
-          <span className="text-xs text-stone-600">—</span>
-        ) : (
+        {canManage && role === "CO_ADMIN" ? (
           <button
-            onClick={toggleCoAdmin}
+            onClick={demote}
             disabled={isPending}
             className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-stone-300 transition-colors hover:border-amber-400/50 disabled:opacity-50"
           >
-            {isPending
-              ? "Saving…"
-              : role === "CO_ADMIN"
-                ? "Remove Co-Admin"
-                : "Make Co-Admin"}
+            {isPending ? "Saving…" : "Remove Co-Admin"}
           </button>
+        ) : (
+          <span className="text-xs text-stone-600">—</span>
         )}
         {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
       </td>

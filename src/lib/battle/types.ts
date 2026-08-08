@@ -8,8 +8,9 @@ export type PlayerState = {
   hand: BattleCard[];
   active: BattleCard | null;
   discard: BattleCard[];
-  energy: number;
-  maxEnergy: number;
+  energyPlayedThisTurn: boolean;
+  supportPlayedThisTurn: boolean;
+  pendingBonusDamage: number;
   turnsTaken: number;
 };
 
@@ -25,7 +26,9 @@ export type BattleState = {
 };
 
 export type BattleAction =
-  | { type: "PLAY_CARD"; player: PlayerId; handIndex: number }
-  | { type: "ATTACK"; player: PlayerId }
+  | { type: "PLAY_ATTACKER"; player: PlayerId; handIndex: number }
+  | { type: "PLAY_ENERGY"; player: PlayerId; handIndex: number }
+  | { type: "PLAY_SUPPORT"; player: PlayerId; handIndex: number }
+  | { type: "ATTACK"; player: PlayerId; attackIndex: number }
   | { type: "END_TURN"; player: PlayerId }
   | { type: "RESET"; cards: BattleCard[] };

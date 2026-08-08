@@ -2,8 +2,14 @@
 
 import { useState, useTransition } from "react";
 import { agreeToRoleVote } from "@/app/actions/governance";
-import type { OpenRoleVote } from "@/lib/governance";
+import type { OpenRoleVote, RoleVoteDirection } from "@/lib/governance";
 import type { DirectoryUser } from "@/lib/users";
+
+const DIRECTION_LABEL: Record<RoleVoteDirection, string> = {
+  PROMOTE: "Promotion to Admin",
+  DEMOTE: "Demotion to Co-Admin",
+  PROMOTE_MEMBER: "Promotion to Co-Admin",
+};
 
 export function VoteNotificationList({
   openVotes,
@@ -47,10 +53,7 @@ export function VoteNotificationList({
                   {usernameById.get(vote.targetUserId) ?? "unknown"}
                 </span>{" "}
                 <span className="text-stone-400">
-                  —{" "}
-                  {vote.direction === "PROMOTE"
-                    ? "Promotion to Admin"
-                    : "Demotion to Co-Admin"}{" "}
+                  — {DIRECTION_LABEL[vote.direction]}{" "}
                   — {vote.ballotAdminIds.length}/{vote.requiredCount} agreed
                 </span>
               </div>

@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth";
 import { createAdminClient } from "@/utils/supabase/admin";
-import type { Ability } from "@/lib/cards";
+import type { Ability, CardRole, EffectType } from "@/lib/cards";
 
 export type CardActionResult =
   | { error: string; conflict?: boolean }
@@ -13,9 +13,10 @@ export type CardActionResult =
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const BUCKET = "pack-images";
 
-const MAX_ABILITIES = 8;
 const MAX_ABILITY_NAME = 60;
 const MAX_ABILITY_DESC = 300;
+const ROLES: CardRole[] = ["ATTACKER", "SUPPORT", "ENERGY"];
+const EFFECT_TYPES: EffectType[] = ["DRAW", "HEAL", "ADD_ENERGY", "BOOST_DAMAGE"];
 
 async function uploadCardImages(
   files: File[],
@@ -62,25 +63,45 @@ function clampInt(
   return Math.min(max, Math.max(min, n));
 }
 
-function parseAbilities(raw: FormDataEntryValue | null): Ability[] {
+function parseRole(raw: FormDataEntryValue | null): CardRole {
+  const value = String(raw ?? "");
+  return (ROLES as string[]).includes(value) ? (value as CardRole) : "ATTACKER";
+}
+
+function parseAbilities(raw: FormDataEntryValue | null, role: CardRole): Ability[] {
+  const maxAbilities = role === "ATTACKER" ? 2 : role === "SUPPORT" ? 1 : 0;
+  if (maxAbilities === 0) return [];
+
   try {
     const parsed = JSON.parse(String(raw ?? "[]"));
     if (!Array.isArray(parsed)) return [];
     return parsed
       .filter(
-        (a): a is { name: unknown; description: unknown } =>
-          Boolean(a) && typeof a === "object"
+        (a): a is Record<string, unknown> => Boolean(a) && typeof a === "object"
       )
-      .map((a) => ({
-        name: String(a.name ?? "")
-          .trim()
-          .slice(0, MAX_ABILITY_NAME),
-        description: String(a.description ?? "")
-          .trim()
-          .slice(0, MAX_ABILITY_DESC),
-      }))
+      .map((a): Ability => {
+        const ability: Ability = {
+          name: String(a.name ?? "")
+            .trim()
+            .slice(0, MAX_ABILITY_NAME),
+          description: String(a.description ?? "")
+            .trim()
+            .slice(0, MAX_ABILITY_DESC),
+        };
+        if (role === "ATTACKER") {
+          ability.damage = clampInt(String(a.damage ?? 0), 0, 0, 99);
+          ability.energyCost = clampInt(String(a.energyCost ?? 0), 0, 0, 10);
+        } else if (role === "SUPPORT") {
+          const effectType = String(a.effectType ?? "");
+          ability.effectType = (EFFECT_TYPES as string[]).includes(effectType)
+            ? (effectType as EffectType)
+            : "DRAW";
+          ability.magnitude = clampInt(String(a.magnitude ?? 0), 1, 0, 50);
+        }
+        return ability;
+      })
       .filter((a) => a.name.length > 0)
-      .slice(0, MAX_ABILITIES);
+      .slice(0, maxAbilities);
   } catch {
     return [];
   }
@@ -90,11 +111,11 @@ function readCardFields(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim();
   const cardType = String(formData.get("cardType") ?? "").trim();
-  const cost = clampInt(formData.get("cost"), 0, 0, 20);
-  const attack = clampInt(formData.get("attack"), 0, 0, 99);
+  const role = parseRole(formData.get("role"));
   const hp = clampInt(formData.get("hp"), 1, 1, 99);
-  const abilities = parseAbilities(formData.get("abilities"));
-  return { title, body, cardType, cost, attack, hp, abilities };
+  const energyAmount = clampInt(formData.get("energyAmount"), 1, 1, 10);
+  const abilities = parseAbilities(formData.get("abilities"), role);
+  return { title, body, cardType, role, hp, energyAmount, abilities };
 }
 
 export async function createCard(
@@ -106,7 +127,7 @@ export async function createCard(
     return { error: "Only admins can create cards." };
   }
 
-  const { title, body, cardType, cost, attack, hp, abilities } =
+  const { title, body, cardType, role, hp, energyAmount, abilities } =
     readCardFields(formData);
   if (!title) {
     return { error: "Title is required." };
@@ -129,9 +150,9 @@ export async function createCard(
       title,
       body,
       image_urls: imageUrls,
-      attack,
+      role,
       hp,
-      cost,
+      energy_amount: energyAmount,
       card_type: cardType,
       abilities,
       created_by: currentUser.id,
@@ -158,7 +179,7 @@ export async function updateCard(
     return { error: "Only admins can edit cards directly." };
   }
 
-  const { title, body, cardType, cost, attack, hp, abilities } =
+  const { title, body, cardType, role, hp, energyAmount, abilities } =
     readCardFields(formData);
   if (!title) {
     return { error: "Title is required." };
@@ -193,9 +214,9 @@ export async function updateCard(
       title,
       body,
       image_urls: [...keepImages, ...newImageUrls],
-      attack,
+      role,
       hp,
-      cost,
+      energy_amount: energyAmount,
       card_type: cardType,
       abilities,
       version: existing.version + 1,
@@ -222,7 +243,7 @@ export async function proposeCardEdit(
     return { error: "Only co-admins can propose edits." };
   }
 
-  const { title, body, cardType, cost, attack, hp, abilities } =
+  const { title, body, cardType, role, hp, energyAmount, abilities } =
     readCardFields(formData);
   if (!title) {
     return { error: "Title is required." };
@@ -262,9 +283,9 @@ export async function proposeCardEdit(
     title,
     body,
     image_urls: [...keepImages, ...newImageUrls],
-    attack,
+    role,
     hp,
-    cost,
+    energy_amount: energyAmount,
     card_type: cardType,
     abilities,
   });

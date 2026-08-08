@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/utils/supabase/admin";
 
-export type RoleVoteDirection = "PROMOTE" | "DEMOTE";
+export type RoleVoteDirection = "PROMOTE" | "DEMOTE" | "PROMOTE_MEMBER";
 
 export type OpenRoleVote = {
   id: string;

@@ -3,10 +3,27 @@
 import { revalidatePath } from "next/cache";
 import { getCurrentUser, type Role } from "@/lib/auth";
 import { createAdminClient } from "@/utils/supabase/admin";
+import type { RoleVoteDirection } from "@/lib/governance";
 
 export type GovernanceActionResult = { error: string } | { error: null };
 
-type RoleVoteDirection = "PROMOTE" | "DEMOTE";
+const REQUIRED_ROLE: Record<RoleVoteDirection, Role> = {
+  PROMOTE: "CO_ADMIN",
+  DEMOTE: "ADMIN",
+  PROMOTE_MEMBER: "USER",
+};
+
+const REQUIRED_COUNT: Record<RoleVoteDirection, number> = {
+  PROMOTE: 3,
+  DEMOTE: 2,
+  PROMOTE_MEMBER: 2,
+};
+
+const TARGET_ERROR: Record<RoleVoteDirection, string> = {
+  PROMOTE: "Only co-admins can be nominated for promotion.",
+  DEMOTE: "Only admins can be targeted for demotion.",
+  PROMOTE_MEMBER: "Only members can be nominated for co-admin promotion.",
+};
 
 export async function startRoleVote(
   targetUserId: string,
@@ -28,14 +45,8 @@ export async function startRoleVote(
   }
 
   const meta = data.user.app_metadata as { role?: Role };
-  const requiredRole = direction === "PROMOTE" ? "CO_ADMIN" : "ADMIN";
-  if (meta.role !== requiredRole) {
-    return {
-      error:
-        direction === "PROMOTE"
-          ? "Only co-admins can be nominated for promotion."
-          : "Only admins can be targeted for demotion.",
-    };
+  if (meta.role !== REQUIRED_ROLE[direction]) {
+    return { error: TARGET_ERROR[direction] };
   }
 
   if (direction === "DEMOTE") {
@@ -56,7 +67,7 @@ export async function startRoleVote(
     .insert({
       target_user_id: targetUserId,
       direction,
-      required_count: direction === "PROMOTE" ? 3 : 2,
+      required_count: REQUIRED_COUNT[direction],
       initiated_by: currentUser.id,
     })
     .select("id")
@@ -119,10 +130,12 @@ export async function agreeToRoleVote(
     const { data: targetData, error: targetError } =
       await adminClient.auth.admin.getUserById(outcome.target_user_id);
     if (!targetError && targetData.user) {
+      const newRole: Role =
+        outcome.direction === "PROMOTE" ? "ADMIN" : "CO_ADMIN";
       await adminClient.auth.admin.updateUserById(outcome.target_user_id, {
         app_metadata: {
           ...targetData.user.app_metadata,
-          role: outcome.direction === "PROMOTE" ? "ADMIN" : "CO_ADMIN",
+          role: newRole,
         },
       });
     }

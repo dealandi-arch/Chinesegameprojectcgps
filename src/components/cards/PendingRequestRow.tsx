@@ -53,8 +53,10 @@ export function PendingRequestRow({
             {request.title}
           </h3>
           <p className="mt-1 text-xs text-stone-400">
-            ⚔ {request.attack} · ♥ {request.hp} · {request.cost}⚡
+            {request.role}
             {request.cardType ? ` · ${request.cardType}` : ""}
+            {request.role === "ATTACKER" && ` · ♥ ${request.hp}`}
+            {request.role === "ENERGY" && ` · +${request.energyAmount}⚡`}
           </p>
           <p className="mt-1 text-xs text-stone-400">{request.body}</p>
         </div>

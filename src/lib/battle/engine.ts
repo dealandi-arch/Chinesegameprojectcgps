@@ -8,8 +8,6 @@ import type {
 
 export const INITIAL_HAND_SIZE = 3;
 export const MAX_HAND_SIZE = 7;
-export const INITIAL_ENERGY_CAP = 1;
-export const ENERGY_CAP_MAX = 10;
 
 function shuffle<T>(arr: T[]): T[] {
   const result = [...arr];
@@ -36,7 +34,9 @@ function drawUpTo(player: PlayerState, count: number): PlayerState {
   const deck = [...player.deck];
   for (
     let i = 0;
-    i < count && deck.length > 0 && player.hand.length + drawn.length < MAX_HAND_SIZE;
+    i < count &&
+    deck.length > 0 &&
+    player.hand.length + drawn.length < MAX_HAND_SIZE;
     i++
   ) {
     drawn.push(deck.shift()!);
@@ -51,8 +51,9 @@ function emptyPlayer(id: PlayerId): PlayerState {
     hand: [],
     active: null,
     discard: [],
-    energy: 0,
-    maxEnergy: 0,
+    energyPlayedThisTurn: false,
+    supportPlayedThisTurn: false,
+    pendingBonusDamage: 0,
     turnsTaken: 0,
   };
 }
@@ -76,34 +77,9 @@ export function createInitialState(cards: BattleCard[]): BattleState {
   const { deckP1, deckP2 } = dealDecks(cards);
 
   // P1 is already "in" their first turn (turnsTaken = 1) so startTurn treats
-  // P2's later first turn as turn 1 too (not accidentally turn 2) -- see
-  // startTurn's turnsTaken > 1 check.
-  const p1 = drawUpTo(
-    {
-      id: "P1",
-      deck: deckP1,
-      hand: [],
-      active: null,
-      discard: [],
-      energy: INITIAL_ENERGY_CAP,
-      maxEnergy: INITIAL_ENERGY_CAP,
-      turnsTaken: 1,
-    },
-    INITIAL_HAND_SIZE
-  );
-  const p2 = drawUpTo(
-    {
-      id: "P2",
-      deck: deckP2,
-      hand: [],
-      active: null,
-      discard: [],
-      energy: INITIAL_ENERGY_CAP,
-      maxEnergy: INITIAL_ENERGY_CAP,
-      turnsTaken: 0,
-    },
-    INITIAL_HAND_SIZE
-  );
+  // P2's later first turn as turn 1 too, not turn 2.
+  const p1 = drawUpTo({ ...emptyPlayer("P1"), deck: deckP1, turnsTaken: 1 }, INITIAL_HAND_SIZE);
+  const p2 = drawUpTo({ ...emptyPlayer("P2"), deck: deckP2 }, INITIAL_HAND_SIZE);
 
   return {
     phase: "IN_PROGRESS",
@@ -116,18 +92,12 @@ export function createInitialState(cards: BattleCard[]): BattleState {
 }
 
 function startTurn(state: BattleState, player: PlayerId): BattleState {
-  const prev = state.players[player];
-  const turnsTaken = prev.turnsTaken + 1;
-  const maxEnergy =
-    turnsTaken > 1
-      ? Math.min(prev.maxEnergy + 1, ENERGY_CAP_MAX)
-      : prev.maxEnergy;
-
   let p: PlayerState = {
-    ...prev,
-    turnsTaken,
-    maxEnergy,
-    energy: maxEnergy,
+    ...state.players[player],
+    turnsTaken: state.players[player].turnsTaken + 1,
+    energyPlayedThisTurn: false,
+    supportPlayedThisTurn: false,
+    pendingBonusDamage: 0,
   };
   p = drawUpTo(p, 1);
 
@@ -151,7 +121,7 @@ function startTurn(state: BattleState, player: PlayerId): BattleState {
   return next;
 }
 
-export function playCard(
+export function playAttacker(
   state: BattleState,
   player: PlayerId,
   handIndex: number
@@ -159,14 +129,13 @@ export function playCard(
   if (state.phase !== "IN_PROGRESS" || state.turn !== player) return state;
   const p = state.players[player];
   const card = p.hand[handIndex];
-  if (!card || p.active !== null || card.cost > p.energy) return state;
+  if (!card || card.role !== "ATTACKER" || p.active !== null) return state;
 
   const hand = p.hand.filter((_, i) => i !== handIndex);
   const nextP: PlayerState = {
     ...p,
     hand,
-    active: card,
-    energy: p.energy - card.cost,
+    active: { ...card, currentHp: card.maxHp, attachedEnergy: 0 },
   };
   return {
     ...state,
@@ -175,18 +144,121 @@ export function playCard(
   };
 }
 
-export function attack(state: BattleState, player: PlayerId): BattleState {
+export function playEnergy(
+  state: BattleState,
+  player: PlayerId,
+  handIndex: number
+): BattleState {
+  if (state.phase !== "IN_PROGRESS" || state.turn !== player) return state;
+  const p = state.players[player];
+  const card = p.hand[handIndex];
+  if (
+    !card ||
+    card.role !== "ENERGY" ||
+    p.energyPlayedThisTurn ||
+    !p.active
+  ) {
+    return state;
+  }
+
+  const hand = p.hand.filter((_, i) => i !== handIndex);
+  const nextP: PlayerState = {
+    ...p,
+    hand,
+    discard: [...p.discard, card],
+    active: {
+      ...p.active,
+      attachedEnergy: p.active.attachedEnergy + card.energyAmount,
+    },
+    energyPlayedThisTurn: true,
+  };
+  return {
+    ...state,
+    players: { ...state.players, [player]: nextP },
+    log: [
+      ...state.log,
+      `${player} attaches ${card.title} (+${card.energyAmount} energy).`,
+    ],
+  };
+}
+
+export function playSupport(
+  state: BattleState,
+  player: PlayerId,
+  handIndex: number
+): BattleState {
+  if (state.phase !== "IN_PROGRESS" || state.turn !== player) return state;
+  const p = state.players[player];
+  const card = p.hand[handIndex];
+  const effect = card?.abilities[0];
+  if (!card || card.role !== "SUPPORT" || p.supportPlayedThisTurn || !effect) {
+    return state;
+  }
+
+  const magnitude = effect.magnitude ?? 0;
+  let nextP: PlayerState = { ...p };
+  const log = `${player} plays ${card.title}.`;
+
+  switch (effect.effectType) {
+    case "DRAW":
+      nextP = drawUpTo(nextP, magnitude);
+      break;
+    case "HEAL": {
+      if (!nextP.active) return state;
+      nextP.active = {
+        ...nextP.active,
+        currentHp: Math.min(nextP.active.maxHp, nextP.active.currentHp + magnitude),
+      };
+      break;
+    }
+    case "ADD_ENERGY": {
+      if (!nextP.active) return state;
+      nextP.active = {
+        ...nextP.active,
+        attachedEnergy: nextP.active.attachedEnergy + magnitude,
+      };
+      break;
+    }
+    case "BOOST_DAMAGE":
+      nextP.pendingBonusDamage += magnitude;
+      break;
+    default:
+      return state;
+  }
+
+  nextP.hand = nextP.hand.filter((_, i) => i !== handIndex);
+  nextP.discard = [...nextP.discard, card];
+  nextP.supportPlayedThisTurn = true;
+
+  return {
+    ...state,
+    players: { ...state.players, [player]: nextP },
+    log: [...state.log, log],
+  };
+}
+
+export function attack(
+  state: BattleState,
+  player: PlayerId,
+  attackIndex: number
+): BattleState {
   if (state.phase !== "IN_PROGRESS" || state.turn !== player || state.hasAttacked) {
     return state;
   }
   const attacker = state.players[player];
   const opponentId: PlayerId = player === "P1" ? "P2" : "P1";
   const defender = state.players[opponentId];
-  if (!attacker.active || !defender.active) return state;
+  const ability = attacker.active?.abilities[attackIndex];
+  if (!attacker.active || !defender.active || !ability) return state;
 
-  const remainingHp = defender.active.currentHp - attacker.active.attack;
+  const energyCost = ability.energyCost ?? 0;
+  if (attacker.active.attachedEnergy < energyCost) return state;
+
+  const damage = (ability.damage ?? 0) + attacker.pendingBonusDamage;
+  const remainingHp = defender.active.currentHp - damage;
+
   let nextDefender: PlayerState;
-  let log = `${player}'s ${attacker.active.title} hits ${defender.active.title} for ${attacker.active.attack}.`;
+  let log = `${player}'s ${attacker.active.title} uses ${ability.name} for ${damage} damage.`;
 
   if (remainingHp <= 0) {
     nextDefender = {
@@ -202,10 +274,16 @@ export function attack(state: BattleState, player: PlayerId): BattleState {
     };
   }
 
+  const nextAttacker: PlayerState = { ...attacker, pendingBonusDamage: 0 };
+
   return {
     ...state,
     hasAttacked: true,
-    players: { ...state.players, [opponentId]: nextDefender },
+    players: {
+      ...state.players,
+      [player]: nextAttacker,
+      [opponentId]: nextDefender,
+    },
     log: [...state.log, log],
   };
 }
@@ -221,10 +299,14 @@ export function battleReducer(
   action: BattleAction
 ): BattleState {
   switch (action.type) {
-    case "PLAY_CARD":
-      return playCard(state, action.player, action.handIndex);
+    case "PLAY_ATTACKER":
+      return playAttacker(state, action.player, action.handIndex);
+    case "PLAY_ENERGY":
+      return playEnergy(state, action.player, action.handIndex);
+    case "PLAY_SUPPORT":
+      return playSupport(state, action.player, action.handIndex);
     case "ATTACK":
-      return attack(state, action.player);
+      return attack(state, action.player, action.attackIndex);
     case "END_TURN":
       return endTurn(state, action.player);
     case "RESET":

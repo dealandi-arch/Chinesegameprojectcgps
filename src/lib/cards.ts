@@ -1,8 +1,16 @@
 import { createAdminClient } from "@/utils/supabase/admin";
 
+export type CardRole = "ATTACKER" | "SUPPORT" | "ENERGY";
+
+export type EffectType = "DRAW" | "HEAL" | "ADD_ENERGY" | "BOOST_DAMAGE";
+
 export type Ability = {
   name: string;
   description: string;
+  damage?: number;
+  energyCost?: number;
+  effectType?: EffectType;
+  magnitude?: number;
 };
 
 export type Card = {
@@ -11,9 +19,9 @@ export type Card = {
   body: string;
   imageUrls: string[];
   version: number;
-  attack: number;
+  role: CardRole;
   hp: number;
-  cost: number;
+  energyAmount: number;
   cardType: string;
   abilities: Ability[];
   createdBy: string;
@@ -32,9 +40,9 @@ export type CardEditRequest = {
   title: string;
   body: string;
   imageUrls: string[];
-  attack: number;
+  role: CardRole;
   hp: number;
-  cost: number;
+  energyAmount: number;
   cardType: string;
   abilities: Ability[];
   status: CardEditRequestStatus;
@@ -50,9 +58,9 @@ type CardRow = {
   body: string;
   image_urls: string[];
   version: number;
-  attack: number;
+  role: CardRole;
   hp: number;
-  cost: number;
+  energy_amount: number;
   card_type: string;
   abilities: Ability[];
   created_by: string;
@@ -69,9 +77,9 @@ type CardEditRequestRow = {
   title: string;
   body: string;
   image_urls: string[];
-  attack: number;
+  role: CardRole;
   hp: number;
-  cost: number;
+  energy_amount: number;
   card_type: string;
   abilities: Ability[];
   status: CardEditRequestStatus;
@@ -88,9 +96,9 @@ function mapCard(row: CardRow): Card {
     body: row.body,
     imageUrls: row.image_urls,
     version: row.version,
-    attack: row.attack,
+    role: row.role,
     hp: row.hp,
-    cost: row.cost,
+    energyAmount: row.energy_amount,
     cardType: row.card_type,
     abilities: row.abilities,
     createdBy: row.created_by,
@@ -109,9 +117,9 @@ function mapCardEditRequest(row: CardEditRequestRow): CardEditRequest {
     title: row.title,
     body: row.body,
     imageUrls: row.image_urls,
-    attack: row.attack,
+    role: row.role,
     hp: row.hp,
-    cost: row.cost,
+    energyAmount: row.energy_amount,
     cardType: row.card_type,
     abilities: row.abilities,
     status: row.status,
@@ -164,12 +172,13 @@ export type BattleCard = {
   title: string;
   body: string;
   imageUrls: string[];
-  attack: number;
+  role: CardRole;
+  cardType: string;
   maxHp: number;
   currentHp: number;
-  cost: number;
-  cardType: string;
+  energyAmount: number;
   abilities: Ability[];
+  attachedEnergy: number;
 };
 
 export function toBattleCard(card: Card): BattleCard {
@@ -178,13 +187,29 @@ export function toBattleCard(card: Card): BattleCard {
     title: card.title,
     body: card.body,
     imageUrls: card.imageUrls,
-    attack: card.attack,
+    role: card.role,
+    cardType: card.cardType,
     maxHp: card.hp,
     currentHp: card.hp,
-    cost: card.cost,
-    cardType: card.cardType,
+    energyAmount: card.energyAmount,
     abilities: card.abilities,
+    attachedEnergy: 0,
   };
+}
+
+export function describeEffect(ability: Ability): string {
+  switch (ability.effectType) {
+    case "DRAW":
+      return `Draw ${ability.magnitude} card${ability.magnitude === 1 ? "" : "s"}.`;
+    case "HEAL":
+      return `Heal ${ability.magnitude} HP on your active card.`;
+    case "ADD_ENERGY":
+      return `Attach ${ability.magnitude} bonus energy to your active card.`;
+    case "BOOST_DAMAGE":
+      return `Your next attack this turn deals +${ability.magnitude} damage.`;
+    default:
+      return ability.description;
+  }
 }
 
 export async function getBattleReadyCards(): Promise<Card[]> {

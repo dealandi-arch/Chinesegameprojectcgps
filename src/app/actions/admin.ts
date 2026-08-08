@@ -6,9 +6,8 @@ import { createAdminClient } from "@/utils/supabase/admin";
 
 export type AdminActionResult = { error: string } | { error: null };
 
-export async function setCoAdminStatus(
-  userId: string,
-  makeCoAdmin: boolean
+export async function demoteCoAdminToUser(
+  userId: string
 ): Promise<AdminActionResult> {
   const currentUser = await getCurrentUser();
   if (!currentUser || currentUser.role !== "ADMIN") {
@@ -24,8 +23,8 @@ export async function setCoAdminStatus(
   }
 
   const meta = data.user.app_metadata as { username?: string; role?: string };
-  if (meta.role === "ADMIN") {
-    return { error: "Admins cannot be changed here." };
+  if (meta.role !== "CO_ADMIN") {
+    return { error: "Only co-admins can be demoted here." };
   }
 
   const { error: updateError } = await adminClient.auth.admin.updateUserById(
@@ -33,7 +32,7 @@ export async function setCoAdminStatus(
     {
       app_metadata: {
         ...data.user.app_metadata,
-        role: makeCoAdmin ? "CO_ADMIN" : "USER",
+        role: "USER",
       },
     }
   );
