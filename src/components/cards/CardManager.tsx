@@ -1,23 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { PackCard } from "@/components/packs/PackCard";
-import { PackEditForm } from "@/components/packs/PackEditForm";
-import type { Pack } from "@/lib/packs";
+import { CardListItem } from "@/components/cards/CardListItem";
+import { CardEditForm } from "@/components/cards/CardEditForm";
+import type { Card } from "@/lib/cards";
 
-export function PackManager({
+export function CardManager({
   mode,
-  packs,
+  cards,
 }: {
   mode: "admin" | "propose";
-  packs: Pack[];
+  cards: Card[];
 }) {
   const [creating, setCreating] = useState(false);
 
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-white">Packs</h2>
+        <h2 className="text-lg font-semibold text-white">Cards</h2>
         <button
           onClick={() => setCreating((v) => !v)}
           className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-stone-300 transition-colors hover:border-amber-400/50"
@@ -25,24 +25,24 @@ export function PackManager({
           {creating
             ? "Cancel"
             : mode === "admin"
-              ? "New Pack"
-              : "Propose New Pack"}
+              ? "New Card"
+              : "Propose New Card"}
         </button>
       </div>
 
       {creating && (
-        <PackEditForm
+        <CardEditForm
           mode={mode === "admin" ? "create" : "propose"}
           onDone={() => setCreating(false)}
         />
       )}
 
       <div className="mt-4 flex flex-col gap-3">
-        {packs.length === 0 && (
-          <p className="text-sm text-stone-500">No packs yet.</p>
+        {cards.length === 0 && (
+          <p className="text-sm text-stone-500">No cards yet.</p>
         )}
-        {packs.map((pack) => (
-          <PackCard key={pack.id} pack={pack} mode={mode} />
+        {cards.map((card) => (
+          <CardListItem key={card.id} card={card} mode={mode} />
         ))}
       </div>
     </div>

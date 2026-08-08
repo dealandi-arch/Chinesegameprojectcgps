@@ -2,19 +2,19 @@
 
 import { useState, useTransition } from "react";
 import {
-  approvePackEditRequest,
-  rejectPackEditRequest,
-} from "@/app/actions/packs";
-import type { PackEditRequest } from "@/lib/packs";
+  approveCardEditRequest,
+  rejectCardEditRequest,
+} from "@/app/actions/cards";
+import type { CardEditRequest } from "@/lib/cards";
 
 export function PendingRequestRow({
   request,
   proposerUsername,
-  packTitle,
+  cardTitle,
 }: {
-  request: PackEditRequest;
+  request: CardEditRequest;
   proposerUsername: string;
-  packTitle: string | null;
+  cardTitle: string | null;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState(false);
@@ -23,7 +23,7 @@ export function PendingRequestRow({
   function approve(force: boolean) {
     setError(null);
     startTransition(async () => {
-      const result = await approvePackEditRequest(request.id, force);
+      const result = await approveCardEditRequest(request.id, force);
       if (result.error) {
         setError(result.error);
         setConflict(Boolean(result.conflict));
@@ -36,7 +36,7 @@ export function PendingRequestRow({
   function reject() {
     setError(null);
     startTransition(async () => {
-      const result = await rejectPackEditRequest(request.id);
+      const result = await rejectCardEditRequest(request.id);
       if (result.error) setError(result.error);
     });
   }
@@ -46,12 +46,16 @@ export function PendingRequestRow({
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs text-stone-500">
-            {packTitle ? `Edit to "${packTitle}"` : "New pack"} by{" "}
+            {cardTitle ? `Edit to "${cardTitle}"` : "New card"} by{" "}
             <span className="text-stone-300">{proposerUsername}</span>
           </p>
           <h3 className="mt-1 text-sm font-semibold text-white">
             {request.title}
           </h3>
+          <p className="mt-1 text-xs text-stone-400">
+            ⚔ {request.attack} · ♥ {request.hp} · {request.cost}⚡
+            {request.cardType ? ` · ${request.cardType}` : ""}
+          </p>
           <p className="mt-1 text-xs text-stone-400">{request.body}</p>
         </div>
       </div>

@@ -2,18 +2,18 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getAllUsers } from "@/lib/users";
 import {
-  getAllPacks,
-  getPendingPackEditRequests,
+  getAllCards,
+  getPendingCardEditRequests,
   getMyPendingProposals,
-} from "@/lib/packs";
+} from "@/lib/cards";
 import { getOpenRoleVotes } from "@/lib/governance";
 import { AdminUserRow } from "@/components/AdminUserRow";
 import { AdminTabs } from "@/components/admin/AdminTabs";
 import { RoleNominationPanel } from "@/components/governance/RoleNominationPanel";
 import { VoteNotificationList } from "@/components/notifications/VoteNotificationList";
-import { PackManager } from "@/components/packs/PackManager";
-import { PendingRequestList } from "@/components/packs/PendingRequestList";
-import { MyProposalsList } from "@/components/packs/MyProposalsList";
+import { CardManager } from "@/components/cards/CardManager";
+import { PendingRequestList } from "@/components/cards/PendingRequestList";
+import { MyProposalsList } from "@/components/cards/MyProposalsList";
 
 export default async function AdminPage() {
   const currentUser = await getCurrentUser();
@@ -26,21 +26,23 @@ export default async function AdminPage() {
 
   const isAdmin = currentUser.role === "ADMIN";
 
-  const [users, packs, pendingRequests, openVotes, myProposals] =
+  const [users, cards, pendingRequests, openVotes, myProposals] =
     await Promise.all([
       getAllUsers(),
-      getAllPacks(),
-      isAdmin ? getPendingPackEditRequests() : Promise.resolve([]),
-      isAdmin ? getOpenRoleVotes() : Promise.resolve([]),
+      getAllCards(),
+      isAdmin ? getPendingCardEditRequests() : Promise.resolve([]),
+      getOpenRoleVotes(),
       isAdmin ? Promise.resolve([]) : getMyPendingProposals(currentUser.id),
     ]);
 
   const votesNeedingMyVote = openVotes.filter(
     (v) => !v.ballotAdminIds.includes(currentUser.id)
   );
-  const notificationBadge = isAdmin
-    ? votesNeedingMyVote.length + pendingRequests.length
-    : myProposals.filter((p) => p.status !== "PENDING").length;
+  const notificationBadge =
+    votesNeedingMyVote.length +
+    (isAdmin
+      ? pendingRequests.length
+      : myProposals.filter((p) => p.status !== "PENDING").length);
 
   const usersTabContent = (
     <div>
@@ -67,15 +69,13 @@ export default async function AdminPage() {
         </tbody>
       </table>
 
-      {isAdmin && (
-        <div className="mt-8">
-          <RoleNominationPanel users={users} openVotes={openVotes} />
-        </div>
-      )}
+      <div className="mt-8">
+        <RoleNominationPanel users={users} openVotes={openVotes} />
+      </div>
     </div>
   );
 
-  const notificationsTabContent = isAdmin ? (
+  const notificationsTabContent = (
     <div className="flex flex-col gap-8">
       <div>
         <h2 className="text-lg font-semibold text-white">
@@ -85,35 +85,37 @@ export default async function AdminPage() {
           <VoteNotificationList
             openVotes={openVotes}
             users={users}
-            currentAdminId={currentUser.id}
+            currentUserId={currentUser.id}
           />
         </div>
       </div>
-      <PendingRequestList
-        requests={pendingRequests}
-        users={users}
-        packs={packs}
-      />
-    </div>
-  ) : (
-    <div>
-      <h2 className="text-lg font-semibold text-white">
-        Your Proposal Updates
-      </h2>
-      <div className="mt-4">
-        {myProposals.length === 0 ? (
-          <p className="text-sm text-stone-500">
-            You haven&apos;t proposed any pack edits yet.
-          </p>
-        ) : (
-          <MyProposalsList proposals={myProposals} />
-        )}
-      </div>
+      {isAdmin ? (
+        <PendingRequestList
+          requests={pendingRequests}
+          users={users}
+          cards={cards}
+        />
+      ) : (
+        <div>
+          <h2 className="text-lg font-semibold text-white">
+            Your Proposal Updates
+          </h2>
+          <div className="mt-4">
+            {myProposals.length === 0 ? (
+              <p className="text-sm text-stone-500">
+                You haven&apos;t proposed any card edits yet.
+              </p>
+            ) : (
+              <MyProposalsList proposals={myProposals} />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 
-  const packsTabContent = (
-    <PackManager mode={isAdmin ? "admin" : "propose"} packs={packs} />
+  const cardsTabContent = (
+    <CardManager mode={isAdmin ? "admin" : "propose"} cards={cards} />
   );
 
   return (
@@ -124,8 +126,8 @@ export default async function AdminPage() {
         </h1>
         <p className="mt-1 text-sm text-stone-400">
           {isAdmin
-            ? "Manage players, run role votes, and review pack content."
-            : "View players and propose pack content edits for an admin to review."}
+            ? "Manage players, run role votes, and review card content."
+            : "View players, vote on role changes, and propose card content edits for an admin to review."}
         </p>
 
         <AdminTabs
@@ -137,7 +139,7 @@ export default async function AdminPage() {
               content: notificationsTabContent,
               badge: notificationBadge,
             },
-            { key: "packs", label: "Packs", content: packsTabContent },
+            { key: "cards", label: "Cards", content: cardsTabContent },
           ]}
         />
       </div>

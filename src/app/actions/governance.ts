@@ -13,8 +13,11 @@ export async function startRoleVote(
   direction: RoleVoteDirection
 ): Promise<GovernanceActionResult> {
   const currentUser = await getCurrentUser();
-  if (!currentUser || currentUser.role !== "ADMIN") {
-    return { error: "Only admins can start a role vote." };
+  if (
+    !currentUser ||
+    (currentUser.role !== "ADMIN" && currentUser.role !== "CO_ADMIN")
+  ) {
+    return { error: "Only admins and co-admins can start a role vote." };
   }
 
   const adminClient = createAdminClient();
@@ -83,8 +86,11 @@ export async function agreeToRoleVote(
   voteId: string
 ): Promise<GovernanceActionResult> {
   const currentUser = await getCurrentUser();
-  if (!currentUser || currentUser.role !== "ADMIN") {
-    return { error: "Only admins can agree to a role vote." };
+  if (
+    !currentUser ||
+    (currentUser.role !== "ADMIN" && currentUser.role !== "CO_ADMIN")
+  ) {
+    return { error: "Only admins and co-admins can agree to a role vote." };
   }
 
   const adminClient = createAdminClient();

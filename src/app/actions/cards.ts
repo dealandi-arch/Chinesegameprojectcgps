@@ -4,15 +4,20 @@ import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth";
 import { createAdminClient } from "@/utils/supabase/admin";
+import type { Ability } from "@/lib/cards";
 
-export type PackActionResult =
+export type CardActionResult =
   | { error: string; conflict?: boolean }
-  | { error: null; packId?: string };
+  | { error: null; cardId?: string };
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const BUCKET = "pack-images";
 
-async function uploadPackImages(
+const MAX_ABILITIES = 8;
+const MAX_ABILITY_NAME = 60;
+const MAX_ABILITY_DESC = 300;
+
+async function uploadCardImages(
   files: File[],
   scope: string
 ): Promise<string[]> {
@@ -46,29 +51,70 @@ async function uploadPackImages(
   return urls;
 }
 
-function readTextFields(formData: FormData) {
-  const title = String(formData.get("title") ?? "").trim();
-  const body = String(formData.get("body") ?? "").trim();
-  return { title, body };
+function clampInt(
+  raw: FormDataEntryValue | null,
+  fallback: number,
+  min: number,
+  max: number
+): number {
+  const n = Math.trunc(Number(raw));
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
 }
 
-export async function createPack(
-  _prevState: PackActionResult | null,
+function parseAbilities(raw: FormDataEntryValue | null): Ability[] {
+  try {
+    const parsed = JSON.parse(String(raw ?? "[]"));
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter(
+        (a): a is { name: unknown; description: unknown } =>
+          Boolean(a) && typeof a === "object"
+      )
+      .map((a) => ({
+        name: String(a.name ?? "")
+          .trim()
+          .slice(0, MAX_ABILITY_NAME),
+        description: String(a.description ?? "")
+          .trim()
+          .slice(0, MAX_ABILITY_DESC),
+      }))
+      .filter((a) => a.name.length > 0)
+      .slice(0, MAX_ABILITIES);
+  } catch {
+    return [];
+  }
+}
+
+function readCardFields(formData: FormData) {
+  const title = String(formData.get("title") ?? "").trim();
+  const body = String(formData.get("body") ?? "").trim();
+  const cardType = String(formData.get("cardType") ?? "").trim();
+  const cost = clampInt(formData.get("cost"), 0, 0, 20);
+  const attack = clampInt(formData.get("attack"), 0, 0, 99);
+  const hp = clampInt(formData.get("hp"), 1, 1, 99);
+  const abilities = parseAbilities(formData.get("abilities"));
+  return { title, body, cardType, cost, attack, hp, abilities };
+}
+
+export async function createCard(
+  _prevState: CardActionResult | null,
   formData: FormData
-): Promise<PackActionResult> {
+): Promise<CardActionResult> {
   const currentUser = await getCurrentUser();
   if (!currentUser || currentUser.role !== "ADMIN") {
-    return { error: "Only admins can create packs." };
+    return { error: "Only admins can create cards." };
   }
 
-  const { title, body } = readTextFields(formData);
+  const { title, body, cardType, cost, attack, hp, abilities } =
+    readCardFields(formData);
   if (!title) {
     return { error: "Title is required." };
   }
 
   let imageUrls: string[];
   try {
-    imageUrls = await uploadPackImages(
+    imageUrls = await uploadCardImages(
       formData.getAll("images").filter((f): f is File => f instanceof File),
       "new"
     );
@@ -78,11 +124,16 @@ export async function createPack(
 
   const adminClient = createAdminClient();
   const { data, error } = await adminClient
-    .from("packs")
+    .from("cards")
     .insert({
       title,
       body,
       image_urls: imageUrls,
+      attack,
+      hp,
+      cost,
+      card_type: cardType,
+      abilities,
       created_by: currentUser.id,
       updated_by: currentUser.id,
     })
@@ -90,24 +141,25 @@ export async function createPack(
     .single();
 
   if (error || !data) {
-    return { error: "Failed to create pack. Try again." };
+    return { error: "Failed to create card. Try again." };
   }
 
   revalidatePath("/admin");
-  return { error: null, packId: data.id };
+  return { error: null, cardId: data.id };
 }
 
-export async function updatePack(
-  packId: string,
-  _prevState: PackActionResult | null,
+export async function updateCard(
+  cardId: string,
+  _prevState: CardActionResult | null,
   formData: FormData
-): Promise<PackActionResult> {
+): Promise<CardActionResult> {
   const currentUser = await getCurrentUser();
   if (!currentUser || currentUser.role !== "ADMIN") {
-    return { error: "Only admins can edit packs directly." };
+    return { error: "Only admins can edit cards directly." };
   }
 
-  const { title, body } = readTextFields(formData);
+  const { title, body, cardType, cost, attack, hp, abilities } =
+    readCardFields(formData);
   if (!title) {
     return { error: "Title is required." };
   }
@@ -116,9 +168,9 @@ export async function updatePack(
 
   let newImageUrls: string[];
   try {
-    newImageUrls = await uploadPackImages(
+    newImageUrls = await uploadCardImages(
       formData.getAll("images").filter((f): f is File => f instanceof File),
-      packId
+      cardId
     );
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Upload failed." };
@@ -126,46 +178,52 @@ export async function updatePack(
 
   const adminClient = createAdminClient();
   const { data: existing, error: fetchError } = await adminClient
-    .from("packs")
+    .from("cards")
     .select("version")
-    .eq("id", packId)
+    .eq("id", cardId)
     .single();
 
   if (fetchError || !existing) {
-    return { error: "That pack no longer exists." };
+    return { error: "That card no longer exists." };
   }
 
   const { error } = await adminClient
-    .from("packs")
+    .from("cards")
     .update({
       title,
       body,
       image_urls: [...keepImages, ...newImageUrls],
+      attack,
+      hp,
+      cost,
+      card_type: cardType,
+      abilities,
       version: existing.version + 1,
       updated_by: currentUser.id,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", packId);
+    .eq("id", cardId);
 
   if (error) {
-    return { error: "Failed to update pack. Try again." };
+    return { error: "Failed to update card. Try again." };
   }
 
   revalidatePath("/admin");
-  return { error: null, packId };
+  return { error: null, cardId };
 }
 
-export async function proposePackEdit(
-  packId: string | null,
-  _prevState: PackActionResult | null,
+export async function proposeCardEdit(
+  cardId: string | null,
+  _prevState: CardActionResult | null,
   formData: FormData
-): Promise<PackActionResult> {
+): Promise<CardActionResult> {
   const currentUser = await getCurrentUser();
   if (!currentUser || currentUser.role !== "CO_ADMIN") {
     return { error: "Only co-admins can propose edits." };
   }
 
-  const { title, body } = readTextFields(formData);
+  const { title, body, cardType, cost, attack, hp, abilities } =
+    readCardFields(formData);
   if (!title) {
     return { error: "Title is required." };
   }
@@ -174,9 +232,9 @@ export async function proposePackEdit(
 
   let newImageUrls: string[];
   try {
-    newImageUrls = await uploadPackImages(
+    newImageUrls = await uploadCardImages(
       formData.getAll("images").filter((f): f is File => f instanceof File),
-      packId ?? "new"
+      cardId ?? "new"
     );
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Upload failed." };
@@ -185,25 +243,30 @@ export async function proposePackEdit(
   const adminClient = createAdminClient();
 
   let baseVersion: number | null = null;
-  if (packId) {
-    const { data: pack, error: packError } = await adminClient
-      .from("packs")
+  if (cardId) {
+    const { data: card, error: cardError } = await adminClient
+      .from("cards")
       .select("version")
-      .eq("id", packId)
+      .eq("id", cardId)
       .single();
-    if (packError || !pack) {
-      return { error: "That pack no longer exists." };
+    if (cardError || !card) {
+      return { error: "That card no longer exists." };
     }
-    baseVersion = pack.version;
+    baseVersion = card.version;
   }
 
-  const { error } = await adminClient.from("pack_edit_requests").insert({
-    pack_id: packId,
+  const { error } = await adminClient.from("card_edit_requests").insert({
+    card_id: cardId,
     base_version: baseVersion,
     proposed_by: currentUser.id,
     title,
     body,
     image_urls: [...keepImages, ...newImageUrls],
+    attack,
+    hp,
+    cost,
+    card_type: cardType,
+    abilities,
   });
 
   if (error) {
@@ -214,17 +277,17 @@ export async function proposePackEdit(
   return { error: null };
 }
 
-export async function approvePackEditRequest(
+export async function approveCardEditRequest(
   requestId: string,
   force: boolean
-): Promise<PackActionResult> {
+): Promise<CardActionResult> {
   const currentUser = await getCurrentUser();
   if (!currentUser || currentUser.role !== "ADMIN") {
     return { error: "Only admins can approve edit requests." };
   }
 
   const adminClient = createAdminClient();
-  const { data, error } = await adminClient.rpc("approve_pack_edit_request", {
+  const { data, error } = await adminClient.rpc("approve_card_edit_request", {
     p_request_id: requestId,
     p_reviewer_id: currentUser.id,
     p_force: force,
@@ -234,7 +297,7 @@ export async function approvePackEditRequest(
     if (error.message.includes("version_conflict")) {
       return {
         error:
-          "This pack changed since the proposal was made. Approve anyway or reject it.",
+          "This card changed since the proposal was made. Approve anyway or reject it.",
         conflict: true,
       };
     }
@@ -245,13 +308,13 @@ export async function approvePackEditRequest(
   }
 
   revalidatePath("/admin");
-  return { error: null, packId: data?.[0]?.pack_id };
+  return { error: null, cardId: data?.[0]?.card_id };
 }
 
-export async function rejectPackEditRequest(
+export async function rejectCardEditRequest(
   requestId: string,
   note?: string
-): Promise<PackActionResult> {
+): Promise<CardActionResult> {
   const currentUser = await getCurrentUser();
   if (!currentUser || currentUser.role !== "ADMIN") {
     return { error: "Only admins can reject edit requests." };
@@ -259,7 +322,7 @@ export async function rejectPackEditRequest(
 
   const adminClient = createAdminClient();
   const { data, error } = await adminClient
-    .from("pack_edit_requests")
+    .from("card_edit_requests")
     .update({
       status: "REJECTED",
       reviewed_by: currentUser.id,

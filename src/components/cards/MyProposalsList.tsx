@@ -1,6 +1,6 @@
-import type { PackEditRequest, PackEditRequestStatus } from "@/lib/packs";
+import type { CardEditRequest, CardEditRequestStatus } from "@/lib/cards";
 
-const STATUS_STYLES: Record<PackEditRequestStatus, string> = {
+const STATUS_STYLES: Record<CardEditRequestStatus, string> = {
   PENDING: "bg-amber-400/20 text-amber-300",
   APPROVED: "bg-emerald-400/20 text-emerald-300",
   REJECTED: "bg-red-400/20 text-red-300",
@@ -9,7 +9,7 @@ const STATUS_STYLES: Record<PackEditRequestStatus, string> = {
 export function MyProposalsList({
   proposals,
 }: {
-  proposals: PackEditRequest[];
+  proposals: CardEditRequest[];
 }) {
   if (proposals.length === 0) return null;
 
@@ -24,7 +24,7 @@ export function MyProposalsList({
           >
             <div>
               <p className="text-xs text-stone-500">
-                {p.packId ? "Edit proposal" : "New pack proposal"}
+                {p.cardId ? "Edit proposal" : "New card proposal"}
               </p>
               <h3 className="text-sm font-semibold text-white">{p.title}</h3>
             </div>

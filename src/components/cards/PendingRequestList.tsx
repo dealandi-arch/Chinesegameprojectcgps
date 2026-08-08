@@ -1,27 +1,27 @@
-import { PendingRequestRow } from "@/components/packs/PendingRequestRow";
-import type { PackEditRequest, Pack } from "@/lib/packs";
+import { PendingRequestRow } from "@/components/cards/PendingRequestRow";
+import type { CardEditRequest, Card } from "@/lib/cards";
 import type { DirectoryUser } from "@/lib/users";
 
 export function PendingRequestList({
   requests,
   users,
-  packs,
+  cards,
 }: {
-  requests: PackEditRequest[];
+  requests: CardEditRequest[];
   users: DirectoryUser[];
-  packs: Pack[];
+  cards: Card[];
 }) {
   const usernameById = new Map(users.map((u) => [u.id, u.username]));
-  const titleById = new Map(packs.map((p) => [p.id, p.title]));
+  const titleById = new Map(cards.map((c) => [c.id, c.title]));
 
   return (
     <div>
       <h2 className="text-lg font-semibold text-white">
-        Pending Pack Edit Requests
+        Pending Card Edit Requests
       </h2>
       {requests.length === 0 ? (
         <p className="mt-4 text-sm text-stone-500">
-          No pending pack submissions.
+          No pending card submissions.
         </p>
       ) : (
         <div className="mt-4 flex flex-col gap-3">
@@ -32,8 +32,8 @@ export function PendingRequestList({
               proposerUsername={
                 usernameById.get(request.proposedBy) ?? "unknown"
               }
-              packTitle={
-                request.packId ? titleById.get(request.packId) ?? null : null
+              cardTitle={
+                request.cardId ? titleById.get(request.cardId) ?? null : null
               }
             />
           ))}

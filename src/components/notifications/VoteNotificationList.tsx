@@ -8,11 +8,11 @@ import type { DirectoryUser } from "@/lib/users";
 export function VoteNotificationList({
   openVotes,
   users,
-  currentAdminId,
+  currentUserId,
 }: {
   openVotes: OpenRoleVote[];
   users: DirectoryUser[];
-  currentAdminId: string;
+  currentUserId: string;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -36,7 +36,7 @@ export function VoteNotificationList({
       {error && <p className="mb-2 text-sm text-red-400">{error}</p>}
       <div className="flex flex-col gap-3">
         {openVotes.map((vote) => {
-          const alreadyVoted = vote.ballotAdminIds.includes(currentAdminId);
+          const alreadyVoted = vote.ballotAdminIds.includes(currentUserId);
           return (
             <div
               key={vote.id}
