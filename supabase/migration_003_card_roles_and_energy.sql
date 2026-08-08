@@ -111,69 +111,77 @@ alter table public.role_votes add constraint role_votes_direction_check
   check (direction in ('PROMOTE', 'DEMOTE', 'PROMOTE_MEMBER'));
 
 -- ============================================================
--- 4. Seed real cards -- 3 Attacker (Dumpling), 4 Support (Mala, one per
---    effect type), 2 Energy (Sauce). Requires an existing ADMIN account.
+-- 4. Seed real cards -- 3 Attacker (real Cantonese dim sum dumplings),
+--    4 Support (Mala, one per effect type -- mala is genuinely Sichuan/
+--    Chongqing in origin, not Cantonese, but is called out below for its
+--    huge popularity in today's Hong Kong/Guangdong food scene rather than
+--    a fabricated Cantonese origin), 2 Energy (real Cantonese/Hong Kong
+--    condiments). Requires an existing ADMIN account. Text fields use
+--    dollar-quoting ($t$...$t$) so apostrophes need no escaping.
+--    image_urls is left empty -- no image-generation tool was available to
+--    produce the "AI made pictures"; add real/AI images via the card
+--    editor's upload field afterward.
 -- ============================================================
 insert into public.cards (title, body, role, card_type, hp, energy_amount, abilities, created_by, updated_by)
 values
-  ('Xiao Long Bao',
-   'Xiao long bao originated in Shanghai''s Nanxiang region in the 19th century and are famous for the hot, savory soup sealed inside a thin dough wrapper.',
-   'ATTACKER', 'Dumpling', 60, 1,
-   '[{"name":"Soup Burst","description":"Releases a burst of scalding broth.","damage":20,"energyCost":1},{"name":"Steamer Slam","description":"Crashes down with the weight of a bamboo steamer.","damage":40,"energyCost":2}]'::jsonb,
+  ($t$Har Gow$t$,
+   $t$Har gow (shrimp dumpling) is believed to have originated in a teahouse in Guangzhou's Xiguan district in the early 20th century. Known as one of the "four heavenly kings" of Cantonese dim sum, it's prized for its thin, pleated, translucent wrapper made from wheat and tapioca starch, which turns delicately pink around the shrimp filling when steamed.$t$,
+   'ATTACKER', 'Dim Sum', 50, 1,
+   '[{"name":"Pleated Wrap","description":"A swift jab from its delicately pleated shell.","damage":15,"energyCost":1},{"name":"Steamed Shrimp Burst","description":"Releases the succulent shrimp filling in a powerful burst.","damage":35,"energyCost":2}]'::jsonb,
    (select id from auth.users where raw_app_meta_data->>'role' = 'ADMIN' limit 1),
    (select id from auth.users where raw_app_meta_data->>'role' = 'ADMIN' limit 1)),
 
-  ('Potsticker',
-   'Potstickers (guotie) are pan-fried on one side then steamed, giving them a crisp bottom and soft top -- a Northern Chinese specialty.',
-   'ATTACKER', 'Dumpling', 50, 1,
-   '[{"name":"Pan Sear","description":"A quick sizzling strike.","damage":15,"energyCost":1},{"name":"Crispy Crush","description":"Slams down with a crackling crust.","damage":35,"energyCost":2}]'::jsonb,
+  ($t$Siu Mai$t$,
+   $t$Siu mai is an open-topped dumpling of ground pork, shrimp, and mushroom wrapped in a thin egg-based wrapper. Its roots trace back to Hohhot in Inner Mongolia, but it was adopted and refined by Cantonese teahouses in Guangzhou and Hong Kong, becoming a dim sum staple often finished with a sliver of carrot or a dot of fish roe.$t$,
+   'ATTACKER', 'Dim Sum', 55, 1,
+   '[{"name":"Open-Top Slam","description":"Strikes with its signature open crown.","damage":18,"energyCost":1},{"name":"Golden Wrapper Crush","description":"Crushes down with the weight of its savory pork and shrimp filling.","damage":38,"energyCost":2}]'::jsonb,
    (select id from auth.users where raw_app_meta_data->>'role' = 'ADMIN' limit 1),
    (select id from auth.users where raw_app_meta_data->>'role' = 'ADMIN' limit 1)),
 
-  ('Wonton',
-   'Cantonese wontons are typically filled with shrimp and pork and served in a light broth alongside noodles.',
-   'ATTACKER', 'Dumpling', 45, 1,
-   '[{"name":"Silk Wrap","description":"Wraps the foe in a delicate dough net.","damage":10,"energyCost":1},{"name":"Broth Splash","description":"A splash of scalding broth.","damage":25,"energyCost":2}]'::jsonb,
+  ($t$Cantonese Wonton$t$,
+   $t$Cantonese wontons are smaller and more delicate than their Northern Chinese counterparts, filled with shrimp and pork and traditionally served in a clear broth with thin egg noodles as wonton noodle soup -- a dish closely tied to Hong Kong's noodle shop culture since the mid-20th century.$t$,
+   'ATTACKER', 'Dim Sum', 45, 1,
+   '[{"name":"Silk Wrap","description":"Wraps the foe in a delicate dough net.","damage":12,"energyCost":1},{"name":"Broth Splash","description":"A splash of scalding clear broth.","damage":28,"energyCost":2}]'::jsonb,
    (select id from auth.users where raw_app_meta_data->>'role' = 'ADMIN' limit 1),
    (select id from auth.users where raw_app_meta_data->>'role' = 'ADMIN' limit 1)),
 
-  ('Mala Numbing Rush',
-   'Sichuan peppercorns create the tingling "mala" (numbing-spicy) sensation central to Sichuan cuisine.',
+  ($t$Mala Numbing Rush$t$,
+   $t$Mala (numbing-spicy) flavor comes from Sichuan and Chongqing cuisine, built on the tingling "ma" of Sichuan peppercorns and the fiery "la" of dried chilies. In recent decades it has surged in popularity across Hong Kong and Guangdong through mala xiang guo stir-fry stalls, becoming a fixture of the modern Cantonese food scene despite its Sichuan roots.$t$,
    'SUPPORT', 'Mala', 1, 1,
    '[{"name":"Numbing Rush","description":"Draw 2 extra cards.","effectType":"DRAW","magnitude":2}]'::jsonb,
    (select id from auth.users where raw_app_meta_data->>'role' = 'ADMIN' limit 1),
    (select id from auth.users where raw_app_meta_data->>'role' = 'ADMIN' limit 1)),
 
-  ('Mala Broth Refill',
-   'A rich Sichuan hot pot broth, simmered with chili oil, doubanjiang, and Sichuan peppercorns.',
+  ($t$Mala Broth Refill$t$,
+   $t$Mala hot pot broth is simmered with doubanjiang, Sichuan peppercorns, dried chilies, and beef tallow. Originally a Chongqing street-food tradition, mala hot pot chains have spread rapidly through Hong Kong in recent years, now standing alongside traditional Cantonese hot pot as a favorite night out.$t$,
    'SUPPORT', 'Mala', 1, 1,
    '[{"name":"Broth Refill","description":"Heal 25 HP on your active card.","effectType":"HEAL","magnitude":25}]'::jsonb,
    (select id from auth.users where raw_app_meta_data->>'role' = 'ADMIN' limit 1),
    (select id from auth.users where raw_app_meta_data->>'role' = 'ADMIN' limit 1)),
 
-  ('Mala Oil Drizzle',
-   'Chili-infused Sichuan pepper oil, drizzled generously over noodles and dumplings alike.',
+  ($t$Mala Oil Drizzle$t$,
+   $t$Mala-infused chili oil, drizzled over noodles and dumplings, has become a common condiment on Hong Kong restaurant tables -- a Sichuan import so widely embraced that many diners now consider it a local staple.$t$,
    'SUPPORT', 'Mala', 1, 1,
    '[{"name":"Oil Drizzle","description":"Immediately attach 1 bonus energy.","effectType":"ADD_ENERGY","magnitude":1}]'::jsonb,
    (select id from auth.users where raw_app_meta_data->>'role' = 'ADMIN' limit 1),
    (select id from auth.users where raw_app_meta_data->>'role' = 'ADMIN' limit 1)),
 
-  ('Mala Fire Boost',
-   'An extra-fiery mala seasoning blend, said to double the intensity of the next bite.',
+  ($t$Mala Fire Boost$t$,
+   $t$Bottled mala seasoning blends now line the shelves of Hong Kong wet markets and supermarkets, letting home cooks recreate Sichuan's signature numbing heat in their own Cantonese kitchens.$t$,
    'SUPPORT', 'Mala', 1, 1,
    '[{"name":"Fire Boost","description":"Your next attack this turn deals +15 damage.","effectType":"BOOST_DAMAGE","magnitude":15}]'::jsonb,
    (select id from auth.users where raw_app_meta_data->>'role' = 'ADMIN' limit 1),
    (select id from auth.users where raw_app_meta_data->>'role' = 'ADMIN' limit 1)),
 
-  ('Soy Sauce Energy',
-   'Soy sauce is a fermented condiment made from soybeans, wheat, and salt -- a foundational seasoning in Chinese cooking.',
+  ($t$XO Sauce$t$,
+   $t$XO sauce is a genuinely Cantonese invention, created by Hong Kong chefs in the early 1980s from dried scallops, dried shrimp, chili, and garlic. Its name evokes the luxury of XO cognac, despite containing no alcohol at all.$t$,
    'ENERGY', 'Sauce', 1, 1,
    '[]'::jsonb,
    (select id from auth.users where raw_app_meta_data->>'role' = 'ADMIN' limit 1),
    (select id from auth.users where raw_app_meta_data->>'role' = 'ADMIN' limit 1)),
 
-  ('Chili Oil Energy',
-   'Chili oil infuses dried chilies and spices into hot oil, adding heat and aroma to countless dishes.',
+  ($t$Chiu Chow Chili Oil$t$,
+   $t$Chiu Chow (Teochew) chili oil is a beloved condiment from Hong Kong's Chiu Chow community, made by slow-infusing chili flakes, garlic, and shallots in oil. It's a fixture on tables across Hong Kong's noodle shops and dai pai dongs.$t$,
    'ENERGY', 'Sauce', 1, 2,
    '[]'::jsonb,
    (select id from auth.users where raw_app_meta_data->>'role' = 'ADMIN' limit 1),
