@@ -8,6 +8,9 @@ import type {
 
 export const INITIAL_HAND_SIZE = 3;
 export const MAX_HAND_SIZE = 7;
+export const DECK_SIZE = 60;
+export const ENERGY_SLOT_COUNT = 20;
+export const MAX_COPIES_PER_CARD = 4;
 
 function shuffle<T>(arr: T[]): T[] {
   const result = [...arr];
@@ -18,15 +21,46 @@ function shuffle<T>(arr: T[]): T[] {
   return result;
 }
 
+// Builds one DECK_SIZE-card deck from the shared card pool, like a
+// constructed-format TCG deck: up to MAX_COPIES_PER_CARD of each unique
+// Attacker/Support card, with the rest filled by Energy cards (unlimited
+// copies, matching how Basic Energy works in real TCGs).
+function buildDeck(pool: BattleCard[]): BattleCard[] {
+  const energyCards = pool.filter((c) => c.role === "ENERGY");
+  const nonEnergyCards = pool.filter((c) => c.role !== "ENERGY");
+
+  const deck: BattleCard[] = [];
+  const nonEnergyTarget =
+    energyCards.length > 0 ? DECK_SIZE - ENERGY_SLOT_COUNT : DECK_SIZE;
+
+  outer: for (const card of shuffle(nonEnergyCards)) {
+    for (let i = 0; i < MAX_COPIES_PER_CARD; i++) {
+      if (deck.length >= nonEnergyTarget) break outer;
+      deck.push({ ...card });
+    }
+  }
+
+  while (deck.length < DECK_SIZE && energyCards.length > 0) {
+    const pick = energyCards[Math.floor(Math.random() * energyCards.length)];
+    deck.push({ ...pick });
+  }
+
+  // Fallback for a small pool: pad by repeating whatever exists (ignoring
+  // the copy cap) so the deck still reaches DECK_SIZE rather than leaving
+  // a match unplayable.
+  while (deck.length < DECK_SIZE && pool.length > 0) {
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    deck.push({ ...pick });
+  }
+
+  return shuffle(deck);
+}
+
 export function dealDecks(pool: BattleCard[]): {
   deckP1: BattleCard[];
   deckP2: BattleCard[];
 } {
-  const shuffled = shuffle(pool.map((c) => ({ ...c })));
-  const deckP1: BattleCard[] = [];
-  const deckP2: BattleCard[] = [];
-  shuffled.forEach((card, i) => (i % 2 === 0 ? deckP1 : deckP2).push(card));
-  return { deckP1, deckP2 };
+  return { deckP1: buildDeck(pool), deckP2: buildDeck(pool) };
 }
 
 function drawUpTo(player: PlayerState, count: number): PlayerState {
@@ -63,7 +97,8 @@ function checkLoss(p: PlayerState): boolean {
 }
 
 export function createInitialState(cards: BattleCard[]): BattleState {
-  if (cards.length < 2) {
+  const hasAttacker = cards.some((c) => c.role === "ATTACKER");
+  if (!hasAttacker) {
     return {
       phase: "NOT_ENOUGH_CARDS",
       players: { P1: emptyPlayer("P1"), P2: emptyPlayer("P2") },

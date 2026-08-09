@@ -177,7 +177,7 @@ export function BattleGame({ cards }: { cards: Card[] }) {
   if (state.phase === "NOT_ENOUGH_CARDS") {
     return (
       <p className="text-sm text-stone-400">
-        Not enough cards exist yet — an admin needs to create at least 2
+        No attacker cards exist yet — an admin needs to create at least one
         before a duel can start.
       </p>
     );
