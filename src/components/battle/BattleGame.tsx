@@ -3,165 +3,10 @@
 import { useMemo, useReducer } from "react";
 import { battleReducer, createInitialState } from "@/lib/battle/engine";
 import { toBattleCard, type Card, type BattleCard } from "@/lib/cards";
-import { CardFace } from "@/components/cards/CardFace";
-import type { BattleAction, BattleState, PlayerId } from "@/lib/battle/types";
-
-function HandCard({
-  card,
-  isTurn,
-  dispatch,
-  player,
-  handIndex,
-  hasActive,
-  energyPlayedThisTurn,
-  supportPlayedThisTurn,
-}: {
-  card: BattleCard;
-  isTurn: boolean;
-  dispatch: React.Dispatch<BattleAction>;
-  player: PlayerId;
-  handIndex: number;
-  hasActive: boolean;
-  energyPlayedThisTurn: boolean;
-  supportPlayedThisTurn: boolean;
-}) {
-  let label = "";
-  let disabled = !isTurn;
-  let onClick = () => {};
-
-  if (card.role === "ATTACKER") {
-    label = "Play";
-    disabled = disabled || hasActive;
-    onClick = () => dispatch({ type: "PLAY_ATTACKER", player, handIndex });
-  } else if (card.role === "ENERGY") {
-    label = "Attach";
-    disabled = disabled || !hasActive || energyPlayedThisTurn;
-    onClick = () => dispatch({ type: "PLAY_ENERGY", player, handIndex });
-  } else {
-    label = "Use";
-    disabled = disabled || supportPlayedThisTurn;
-    onClick = () => dispatch({ type: "PLAY_SUPPORT", player, handIndex });
-  }
-
-  return (
-    <div className="w-28 shrink-0">
-      <CardFace card={card} size="compact" />
-      <button
-        onClick={onClick}
-        disabled={disabled}
-        className="mt-1 w-full rounded-full border border-white/10 py-1 text-xs font-medium text-stone-300 transition-colors hover:border-amber-400/50 disabled:opacity-40"
-      >
-        {label}
-      </button>
-    </div>
-  );
-}
-
-function PlayerPanel({
-  id,
-  label,
-  state,
-  dispatch,
-}: {
-  id: PlayerId;
-  label: string;
-  state: BattleState;
-  dispatch: React.Dispatch<BattleAction>;
-}) {
-  const player = state.players[id];
-  const opponentId: PlayerId = id === "P1" ? "P2" : "P1";
-  const opponent = state.players[opponentId];
-  const isTurn = state.phase === "IN_PROGRESS" && state.turn === id;
-
-  return (
-    <div
-      className={`rounded-xl border p-4 ${
-        isTurn ? "border-amber-400/50 bg-amber-400/5" : "border-white/10 bg-white/5"
-      }`}
-    >
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-white">
-          {label} {isTurn && <span className="text-amber-300">(your turn)</span>}
-        </h3>
-        <div className="text-xs text-stone-400">
-          Deck {player.deck.length} · Discard {player.discard.length}
-        </div>
-      </div>
-
-      <div className="mt-3 flex gap-4">
-        <div className="w-40 shrink-0">
-          <span className="mb-1 block text-xs font-medium text-stone-500">
-            Active
-          </span>
-          {player.active ? (
-            <>
-              <CardFace card={player.active} size="full" />
-              <div className="mt-2 flex flex-col gap-1">
-                {player.active.abilities.map((ability, i) => {
-                  const affordable =
-                    player.active!.attachedEnergy >= (ability.energyCost ?? 0);
-                  const canAttack =
-                    isTurn &&
-                    !state.hasAttacked &&
-                    affordable &&
-                    Boolean(opponent.active);
-                  return (
-                    <button
-                      key={i}
-                      onClick={() =>
-                        dispatch({ type: "ATTACK", player: id, attackIndex: i })
-                      }
-                      disabled={!canAttack}
-                      className="rounded-full bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-500 disabled:opacity-40"
-                    >
-                      {ability.name} — {ability.damage ?? 0} dmg (
-                      {ability.energyCost ?? 0}⚡)
-                    </button>
-                  );
-                })}
-              </div>
-            </>
-          ) : (
-            <div className="flex h-40 items-center justify-center rounded-xl border border-dashed border-white/10 text-xs text-stone-600">
-              Empty
-            </div>
-          )}
-        </div>
-
-        <div className="flex-1">
-          <span className="mb-1 block text-xs font-medium text-stone-500">
-            Hand ({player.hand.length})
-          </span>
-          <div className="flex flex-wrap gap-2">
-            {player.hand.map((card, i) => (
-              <HandCard
-                key={`${card.id}-${i}`}
-                card={card}
-                isTurn={isTurn}
-                dispatch={dispatch}
-                player={id}
-                handIndex={i}
-                hasActive={player.active !== null}
-                energyPlayedThisTurn={player.energyPlayedThisTurn}
-                supportPlayedThisTurn={player.supportPlayedThisTurn}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-3">
-        <button
-          onClick={() => dispatch({ type: "END_TURN", player: id })}
-          disabled={!isTurn}
-          className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-stone-300 hover:border-white/30 disabled:opacity-40"
-        >
-          End Turn
-        </button>
-      </div>
-    </div>
-  );
-}
+import { PlayerZone } from "@/components/battle/PlayerZone";
+import { BattleLegend } from "@/components/battle/BattleLegend";
+import { getAttackEffects } from "@/components/battle/attackEffects";
+import type { PlayerId } from "@/lib/battle/types";
 
 export function BattleGame({ cards }: { cards: Card[] }) {
   const battleCards = useMemo<BattleCard[]>(
@@ -174,20 +19,29 @@ export function BattleGame({ cards }: { cards: Card[] }) {
     createInitialState
   );
 
+  const { shaking, flashTarget } = getAttackEffects(state.lastAttack);
+
   if (state.phase === "NOT_ENOUGH_CARDS") {
     return (
-      <p className="text-sm text-stone-400">
+      <p className="text-sm text-stone-600">
         No attacker cards exist yet — an admin needs to create at least one
         before a duel can start.
       </p>
     );
   }
 
+  const turnId: PlayerId = state.turn;
+  const otherId: PlayerId = turnId === "P1" ? "P2" : "P1";
+  const turnPlayer = state.players[turnId];
+  const otherPlayer = state.players[otherId];
+
   return (
-    <div className="flex flex-col gap-4">
+    <div className={`flex flex-col gap-4 ${shaking ? "animate-battle-shake" : ""}`}>
+      <BattleLegend />
+
       {state.phase === "GAME_OVER" && (
-        <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-center">
-          <p className="text-lg font-semibold text-amber-300">
+        <div className="rounded-xl border border-amber-400 bg-amber-100 p-4 text-center">
+          <p className="text-lg font-semibold text-amber-700">
             {state.winner} wins!
           </p>
           <button
@@ -199,12 +53,25 @@ export function BattleGame({ cards }: { cards: Card[] }) {
         </div>
       )}
 
-      <PlayerPanel id="P2" label="Player 2" state={state} dispatch={dispatch} />
+      <PlayerZone
+        label={otherId === "P1" ? "Player 1" : "Player 2"}
+        isTurnHolder={false}
+        flashed={flashTarget === otherId}
+        active={otherPlayer.active}
+        bench={otherPlayer.bench}
+        discardCount={otherPlayer.discard.length}
+        deckCount={otherPlayer.deck.length}
+        energyPlayedThisTurn={otherPlayer.energyPlayedThisTurn}
+        supportPlayedThisTurn={otherPlayer.supportPlayedThisTurn}
+        hasSwitchedThisTurn={otherPlayer.hasSwitchedThisTurn}
+        interactive={false}
+        handCount={otherPlayer.hand.length}
+      />
 
-      <div className="rounded-xl border border-white/10 bg-black/30 p-3">
+      <div className="rounded-xl border border-amber-200 bg-white/70 p-3">
         {state.phase === "IN_PROGRESS" && (
-          <p className="text-center text-sm text-stone-300">
-            Turn: <span className="font-semibold text-white">{state.turn}</span>
+          <p className="text-center text-sm text-stone-700">
+            Turn: <span className="font-semibold text-stone-900">{turnId}</span>
           </p>
         )}
         <div className="mt-2 max-h-24 overflow-y-auto text-xs text-stone-500">
@@ -214,7 +81,39 @@ export function BattleGame({ cards }: { cards: Card[] }) {
         </div>
       </div>
 
-      <PlayerPanel id="P1" label="Player 1" state={state} dispatch={dispatch} />
+      <PlayerZone
+        label={`${turnId === "P1" ? "Player 1" : "Player 2"} (your turn)`}
+        isTurnHolder={true}
+        flashed={flashTarget === turnId}
+        active={turnPlayer.active}
+        bench={turnPlayer.bench}
+        discardCount={turnPlayer.discard.length}
+        deckCount={turnPlayer.deck.length}
+        energyPlayedThisTurn={turnPlayer.energyPlayedThisTurn}
+        supportPlayedThisTurn={turnPlayer.supportPlayedThisTurn}
+        hasSwitchedThisTurn={turnPlayer.hasSwitchedThisTurn}
+        interactive
+        hand={turnPlayer.hand}
+        isYourTurn={state.phase === "IN_PROGRESS"}
+        hasAttacked={state.hasAttacked}
+        opponentHasActive={Boolean(otherPlayer.active)}
+        onPlayAttacker={(handIndex) =>
+          dispatch({ type: "PLAY_ATTACKER", player: turnId, handIndex })
+        }
+        onPlayEnergy={(handIndex) =>
+          dispatch({ type: "PLAY_ENERGY", player: turnId, handIndex })
+        }
+        onPlaySupport={(handIndex) =>
+          dispatch({ type: "PLAY_SUPPORT", player: turnId, handIndex })
+        }
+        onAttack={(attackIndex) =>
+          dispatch({ type: "ATTACK", player: turnId, attackIndex })
+        }
+        onSwitch={(benchIndex) =>
+          dispatch({ type: "SWITCH_ACTIVE", player: turnId, benchIndex })
+        }
+        onEndTurn={() => dispatch({ type: "END_TURN", player: turnId })}
+      />
     </div>
   );
 }

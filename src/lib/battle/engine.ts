@@ -11,6 +11,7 @@ export const MAX_HAND_SIZE = 7;
 export const DECK_SIZE = 60;
 export const ENERGY_SLOT_COUNT = 20;
 export const MAX_COPIES_PER_CARD = 4;
+export const MAX_BENCH_SIZE = 3;
 
 function shuffle<T>(arr: T[]): T[] {
   const result = [...arr];
@@ -84,16 +85,23 @@ function emptyPlayer(id: PlayerId): PlayerState {
     deck: [],
     hand: [],
     active: null,
+    bench: [],
     discard: [],
     energyPlayedThisTurn: false,
     supportPlayedThisTurn: false,
+    hasSwitchedThisTurn: false,
     pendingBonusDamage: 0,
     turnsTaken: 0,
   };
 }
 
 function checkLoss(p: PlayerState): boolean {
-  return p.active === null && p.hand.length === 0 && p.deck.length === 0;
+  return (
+    p.active === null &&
+    p.bench.length === 0 &&
+    p.hand.length === 0 &&
+    p.deck.length === 0
+  );
 }
 
 export function createInitialState(cards: BattleCard[]): BattleState {
@@ -105,6 +113,7 @@ export function createInitialState(cards: BattleCard[]): BattleState {
       turn: "P1",
       winner: null,
       hasAttacked: false,
+      lastAttack: null,
       log: [],
     };
   }
@@ -122,6 +131,7 @@ export function createInitialState(cards: BattleCard[]): BattleState {
     turn: "P1",
     winner: null,
     hasAttacked: false,
+    lastAttack: null,
     log: ["Match started."],
   };
 }
@@ -132,6 +142,7 @@ function startTurn(state: BattleState, player: PlayerId): BattleState {
     turnsTaken: state.players[player].turnsTaken + 1,
     energyPlayedThisTurn: false,
     supportPlayedThisTurn: false,
+    hasSwitchedThisTurn: false,
     pendingBonusDamage: 0,
   };
   p = drawUpTo(p, 1);
@@ -140,6 +151,7 @@ function startTurn(state: BattleState, player: PlayerId): BattleState {
     ...state,
     turn: player,
     hasAttacked: false,
+    lastAttack: null,
     players: { ...state.players, [player]: p },
   };
 
@@ -164,18 +176,55 @@ export function playAttacker(
   if (state.phase !== "IN_PROGRESS" || state.turn !== player) return state;
   const p = state.players[player];
   const card = p.hand[handIndex];
-  if (!card || card.role !== "ATTACKER" || p.active !== null) return state;
+  if (!card || card.role !== "ATTACKER") return state;
+  if (p.active !== null && p.bench.length >= MAX_BENCH_SIZE) return state;
 
   const hand = p.hand.filter((_, i) => i !== handIndex);
-  const nextP: PlayerState = {
-    ...p,
-    hand,
-    active: { ...card, currentHp: card.maxHp, attachedEnergy: 0 },
-  };
+  const inPlay: BattleCard = { ...card, currentHp: card.maxHp, attachedEnergy: 0 };
+
+  const nextP: PlayerState =
+    p.active === null
+      ? { ...p, hand, active: inPlay }
+      : { ...p, hand, bench: [...p.bench, inPlay] };
+
   return {
     ...state,
+    lastAttack: null,
     players: { ...state.players, [player]: nextP },
-    log: [...state.log, `${player} plays ${card.title}.`],
+    log: [
+      ...state.log,
+      p.active === null
+        ? `${player} plays ${card.title}.`
+        : `${player} benches ${card.title}.`,
+    ],
+  };
+}
+
+export function switchActive(
+  state: BattleState,
+  player: PlayerId,
+  benchIndex: number
+): BattleState {
+  if (state.phase !== "IN_PROGRESS" || state.turn !== player) return state;
+  const p = state.players[player];
+  const incoming = p.bench[benchIndex];
+  if (!p.active || p.hasSwitchedThisTurn || !incoming) return state;
+
+  const bench = p.bench.filter((_, i) => i !== benchIndex);
+  bench.push(p.active);
+
+  const nextP: PlayerState = {
+    ...p,
+    active: incoming,
+    bench,
+    hasSwitchedThisTurn: true,
+  };
+
+  return {
+    ...state,
+    lastAttack: null,
+    players: { ...state.players, [player]: nextP },
+    log: [...state.log, `${player} switches in ${incoming.title}.`],
   };
 }
 
@@ -209,6 +258,7 @@ export function playEnergy(
   };
   return {
     ...state,
+    lastAttack: null,
     players: { ...state.players, [player]: nextP },
     log: [
       ...state.log,
@@ -267,6 +317,7 @@ export function playSupport(
 
   return {
     ...state,
+    lastAttack: null,
     players: { ...state.players, [player]: nextP },
     log: [...state.log, log],
   };
@@ -296,12 +347,24 @@ export function attack(
   let log = `${player}'s ${attacker.active.title} uses ${ability.name} for ${damage} damage.`;
 
   if (remainingHp <= 0) {
-    nextDefender = {
-      ...defender,
-      active: null,
-      discard: [...defender.discard, { ...defender.active, currentHp: 0 }],
-    };
-    log += ` ${defender.active.title} is destroyed.`;
+    const koCard = { ...defender.active, currentHp: 0 };
+    if (defender.bench.length > 0) {
+      const [promoted, ...restBench] = defender.bench;
+      nextDefender = {
+        ...defender,
+        active: promoted,
+        bench: restBench,
+        discard: [...defender.discard, koCard],
+      };
+      log += ` ${defender.active.title} is destroyed! ${promoted.title} is promoted from the bench.`;
+    } else {
+      nextDefender = {
+        ...defender,
+        active: null,
+        discard: [...defender.discard, koCard],
+      };
+      log += ` ${defender.active.title} is destroyed.`;
+    }
   } else {
     nextDefender = {
       ...defender,
@@ -314,6 +377,7 @@ export function attack(
   return {
     ...state,
     hasAttacked: true,
+    lastAttack: { amount: damage, target: opponentId },
     players: {
       ...state.players,
       [player]: nextAttacker,
@@ -342,6 +406,8 @@ export function battleReducer(
       return playSupport(state, action.player, action.handIndex);
     case "ATTACK":
       return attack(state, action.player, action.attackIndex);
+    case "SWITCH_ACTIVE":
+      return switchActive(state, action.player, action.benchIndex);
     case "END_TURN":
       return endTurn(state, action.player);
     case "RESET":

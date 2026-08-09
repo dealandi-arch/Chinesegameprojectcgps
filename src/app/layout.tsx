@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Wok Quest — A Chinese Cooking Game",
+  title: "Wok Quest — A Cantonese Card Battler",
   description:
-    "Cook real Chinese dishes and unlock the stories, history, and culture behind every recipe.",
+    "Collect real Cantonese dishes as battle cards and duel friends locally or online while learning the real history behind every dish.",
 };
 
 export default function RootLayout({

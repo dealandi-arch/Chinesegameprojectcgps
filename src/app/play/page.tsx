@@ -9,40 +9,38 @@ export default async function PlaySelectorPage() {
   }
 
   return (
-    <main className="flex-1 px-6 py-12 sm:px-12">
+    <main className="flex-1 bg-gradient-to-b from-amber-50 via-orange-50 to-amber-100 px-6 py-12 text-stone-900 sm:px-12">
       <div className="mx-auto max-w-3xl text-center">
-        <h1 className="text-2xl font-bold text-white">Choose Your Duel</h1>
-        <p className="mt-1 text-sm text-stone-400">
-          Pick how you want to play.
-        </p>
+        <h1 className="text-2xl font-bold text-stone-900">Choose Your Duel</h1>
+        <p className="mt-1 text-sm text-stone-600">Pick how you want to play.</p>
 
         <div className="mt-10 grid gap-4 sm:grid-cols-3">
           <Link
             href="/play/local"
-            className="rounded-2xl border border-white/10 bg-white/5 p-6 text-left transition-colors hover:border-amber-400/50"
+            className="rounded-2xl border border-amber-200 bg-white p-6 text-left shadow-sm transition-colors hover:border-amber-400"
           >
             <div className="text-2xl">🪑</div>
-            <h2 className="mt-3 font-semibold text-white">Local Duel</h2>
-            <p className="mt-1 text-sm text-stone-400">
+            <h2 className="mt-3 font-semibold text-stone-900">Local Duel</h2>
+            <p className="mt-1 text-sm text-stone-600">
               Pass-and-play with a friend on this device.
             </p>
           </Link>
 
           <Link
             href="/play/online"
-            className="rounded-2xl border border-white/10 bg-white/5 p-6 text-left transition-colors hover:border-amber-400/50"
+            className="rounded-2xl border border-amber-200 bg-white p-6 text-left shadow-sm transition-colors hover:border-amber-400"
           >
             <div className="text-2xl">🌐</div>
-            <h2 className="mt-3 font-semibold text-white">Online Duel</h2>
-            <p className="mt-1 text-sm text-stone-400">
+            <h2 className="mt-3 font-semibold text-stone-900">Online Duel</h2>
+            <p className="mt-1 text-sm text-stone-600">
               Create or join a room and play against someone remotely.
             </p>
           </Link>
 
-          <div className="cursor-not-allowed rounded-2xl border border-white/10 bg-white/5 p-6 text-left opacity-50">
+          <div className="cursor-not-allowed rounded-2xl border border-amber-200 bg-white p-6 text-left opacity-50 shadow-sm">
             <div className="text-2xl">🤖</div>
-            <h2 className="mt-3 font-semibold text-white">Vs AI</h2>
-            <p className="mt-1 text-sm text-stone-400">Coming soon.</p>
+            <h2 className="mt-3 font-semibold text-stone-900">Vs AI</h2>
+            <p className="mt-1 text-sm text-stone-600">Coming soon.</p>
           </div>
         </div>
       </div>
