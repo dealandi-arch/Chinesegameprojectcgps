@@ -1,0 +1,172 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { battleReducer, createInitialState } from "@/lib/battle/engine";
+import { chooseAIAction } from "@/lib/battle/ai";
+import { toBattleCard, type Card, type BattleCard } from "@/lib/cards";
+import { PlayerZone } from "@/components/battle/PlayerZone";
+import { BattleLegend } from "@/components/battle/BattleLegend";
+import { getAttackEffects } from "@/components/battle/attackEffects";
+import type { AiOpponent } from "@/lib/battle/aiRoster";
+import type { BattleAction, BattleState, PlayerId } from "@/lib/battle/types";
+
+const HUMAN: PlayerId = "P1";
+const AI: PlayerId = "P2";
+const AI_MOVE_DELAY_MS = 700;
+
+type HumanAction = Exclude<BattleAction, { type: "RESET" }>;
+
+export function AIBattleGame({
+  cards,
+  opponent,
+}: {
+  cards: Card[];
+  opponent: AiOpponent;
+}) {
+  const battleCards = useMemo<BattleCard[]>(() => cards.map(toBattleCard), [cards]);
+  const [state, setState] = useState<BattleState>(() =>
+    createInitialState(battleCards)
+  );
+
+  const stateRef = useRef(state);
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  const aiRunningRef = useRef(false);
+
+  useEffect(() => {
+    if (state.phase !== "IN_PROGRESS" || state.turn !== AI) return;
+    if (aiRunningRef.current) return;
+    aiRunningRef.current = true;
+    let cancelled = false;
+
+    (async () => {
+      let iterations = 0;
+      while (!cancelled && iterations++ < 20) {
+        await new Promise((resolve) => setTimeout(resolve, AI_MOVE_DELAY_MS));
+        if (cancelled) break;
+
+        const current = stateRef.current;
+        if (current.phase !== "IN_PROGRESS" || current.turn !== AI) break;
+
+        const action = chooseAIAction(current, AI, opponent.level);
+        const next = battleReducer(current, action);
+        stateRef.current = next;
+        setState(next);
+
+        if (action.type === "END_TURN" || next.phase !== "IN_PROGRESS") break;
+      }
+      aiRunningRef.current = false;
+    })();
+
+    return () => {
+      cancelled = true;
+      aiRunningRef.current = false;
+    };
+  }, [state.turn, state.phase, opponent.level]);
+
+  const { shaking, flashTarget } = getAttackEffects(state.lastAttack);
+
+  if (state.phase === "NOT_ENOUGH_CARDS") {
+    return (
+      <p className="text-sm text-stone-600">
+        No attacker cards exist yet — an admin needs to create at least one
+        before a duel can start.
+      </p>
+    );
+  }
+
+  function dispatchHuman(action: HumanAction) {
+    if (state.turn !== HUMAN) return;
+    setState((prev) => battleReducer(prev, action));
+  }
+
+  const human = state.players[HUMAN];
+  const ai = state.players[AI];
+  const isYourTurn = state.turn === HUMAN && state.phase === "IN_PROGRESS";
+
+  return (
+    <div className={`flex flex-col gap-4 ${shaking ? "animate-battle-shake" : ""}`}>
+      <BattleLegend />
+
+      {state.phase === "GAME_OVER" && (
+        <div className="rounded-xl border border-amber-400 bg-amber-100 p-4 text-center">
+          <p className="text-lg font-semibold text-amber-700">
+            {state.winner === HUMAN ? "You win!" : `${opponent.name} wins.`}
+          </p>
+          <button
+            onClick={() =>
+              setState(battleReducer(state, { type: "RESET", cards: battleCards }))
+            }
+            className="mt-2 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-500"
+          >
+            Play Again
+          </button>
+        </div>
+      )}
+
+      <PlayerZone
+        label={`${opponent.emoji} ${opponent.name} · ${opponent.title}`}
+        isTurnHolder={state.turn === AI && state.phase === "IN_PROGRESS"}
+        flashed={flashTarget === AI}
+        active={ai.active}
+        bench={ai.bench}
+        discardCount={ai.discard.length}
+        deckCount={ai.deck.length}
+        energyPlayedThisTurn={ai.energyPlayedThisTurn}
+        supportPlayedThisTurn={ai.supportPlayedThisTurn}
+        hasSwitchedThisTurn={ai.hasSwitchedThisTurn}
+        interactive={false}
+        handCount={ai.hand.length}
+      />
+
+      <div className="rounded-xl border border-amber-200 bg-white/70 p-3">
+        {state.phase === "IN_PROGRESS" && (
+          <p className="text-center text-sm text-stone-700">
+            {isYourTurn ? "Your turn" : `${opponent.name} is thinking…`}
+          </p>
+        )}
+        <div className="mt-2 max-h-24 overflow-y-auto text-xs text-stone-500">
+          {state.log.slice(-6).map((line, i) => (
+            <p key={i}>{line}</p>
+          ))}
+        </div>
+      </div>
+
+      <PlayerZone
+        label="You"
+        isTurnHolder={isYourTurn}
+        flashed={flashTarget === HUMAN}
+        active={human.active}
+        bench={human.bench}
+        discardCount={human.discard.length}
+        deckCount={human.deck.length}
+        energyPlayedThisTurn={human.energyPlayedThisTurn}
+        supportPlayedThisTurn={human.supportPlayedThisTurn}
+        hasSwitchedThisTurn={human.hasSwitchedThisTurn}
+        interactive
+        hand={human.hand}
+        isYourTurn={isYourTurn}
+        hasAttacked={state.hasAttacked}
+        opponentHasActive={Boolean(ai.active)}
+        onPlayAttacker={(handIndex) =>
+          dispatchHuman({ type: "PLAY_ATTACKER", player: HUMAN, handIndex })
+        }
+        onPlayEnergy={(handIndex) =>
+          dispatchHuman({ type: "PLAY_ENERGY", player: HUMAN, handIndex })
+        }
+        onPlaySupport={(handIndex) =>
+          dispatchHuman({ type: "PLAY_SUPPORT", player: HUMAN, handIndex })
+        }
+        onAttack={(attackIndex) =>
+          dispatchHuman({ type: "ATTACK", player: HUMAN, attackIndex })
+        }
+        onSwitch={(benchIndex) =>
+          dispatchHuman({ type: "SWITCH_ACTIVE", player: HUMAN, benchIndex })
+        }
+        onEndTurn={() => dispatchHuman({ type: "END_TURN", player: HUMAN })}
+      />
+    </div>
+  );
+}

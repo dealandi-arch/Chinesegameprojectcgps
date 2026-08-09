@@ -37,11 +37,17 @@ export default async function PlaySelectorPage() {
             </p>
           </Link>
 
-          <div className="cursor-not-allowed rounded-2xl border border-amber-200 bg-white p-6 text-left opacity-50 shadow-sm">
-            <div className="text-2xl">🤖</div>
-            <h2 className="mt-3 font-semibold text-stone-900">Vs AI</h2>
-            <p className="mt-1 text-sm text-stone-600">Coming soon.</p>
-          </div>
+          <Link
+            href="/play/ai"
+            className="rounded-2xl border border-amber-200 bg-white p-6 text-left shadow-sm transition-colors hover:border-amber-400"
+          >
+            <div className="text-2xl">🏆</div>
+            <h2 className="mt-3 font-semibold text-stone-900">Play AI</h2>
+            <p className="mt-1 text-sm text-stone-600">
+              Duel a computer chef — 7 difficulty levels, from kitchen rookie
+              to legendary master.
+            </p>
+          </Link>
         </div>
       </div>
     </main>
