@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getBattleReadyCards } from "@/lib/cards";
 import { BattleGame } from "@/components/battle/BattleGame";
+import { ThemedPage } from "@/components/theme/ThemedPage";
 
 export default async function LocalPlayPage() {
   const currentUser = await getCurrentUser();
@@ -12,13 +13,11 @@ export default async function LocalPlayPage() {
   const cards = await getBattleReadyCards();
 
   return (
-    <main className="flex h-full flex-col overflow-hidden bg-gradient-to-b from-amber-50 via-orange-50 to-amber-100 px-4 py-3 text-stone-900 sm:px-8 sm:py-4">
+    <ThemedPage className="flex h-full flex-col overflow-hidden px-4 py-3 sm:px-8 sm:py-4">
       <div className="mx-auto flex h-full w-full max-w-5xl flex-col">
         <div className="shrink-0">
-          <h1 className="text-xl font-bold text-stone-900 sm:text-2xl">
-            Local Duel
-          </h1>
-          <p className="mt-0.5 text-xs text-stone-600 sm:text-sm">
+          <h1 className="text-xl font-bold sm:text-2xl">Local Duel</h1>
+          <p className="mt-0.5 text-xs opacity-70 sm:text-sm">
             Local pass-and-play — whoever&apos;s turn it is, act on this device.
           </p>
         </div>
@@ -26,6 +25,6 @@ export default async function LocalPlayPage() {
           <BattleGame cards={cards} />
         </div>
       </div>
-    </main>
+    </ThemedPage>
   );
 }

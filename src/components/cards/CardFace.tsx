@@ -2,7 +2,7 @@ import type { Card, BattleCard } from "@/lib/cards";
 import { describeEffect } from "@/lib/cards";
 
 type FaceCard = Card | BattleCard;
-type FaceTheme = "dark" | "light";
+type FaceTheme = "dark" | "light" | "lime";
 
 function getHp(card: FaceCard): { current: number; max: number } {
   if ("currentHp" in card) {
@@ -32,6 +32,16 @@ const THEME = {
     title: "text-stone-900",
     divider: "border-amber-200",
     abilityName: "text-amber-700",
+    abilityMeta: "text-stone-600",
+    abilityDesc: "text-stone-500",
+    body: "text-stone-600",
+  },
+  lime: {
+    outer: "border-lime-300 bg-white shadow-sm",
+    placeholder: "bg-lime-100",
+    title: "text-lime-950",
+    divider: "border-lime-300",
+    abilityName: "text-lime-700",
     abilityMeta: "text-stone-600",
     abilityDesc: "text-stone-500",
     body: "text-stone-600",

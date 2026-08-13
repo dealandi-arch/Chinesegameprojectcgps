@@ -6,7 +6,13 @@ import { toBattleCard, type Card, type BattleCard } from "@/lib/cards";
 import { PlayerZone } from "@/components/battle/PlayerZone";
 import { BattleLegend } from "@/components/battle/BattleLegend";
 import { getAttackEffects } from "@/components/battle/attackEffects";
-import type { PlayerId } from "@/lib/battle/types";
+import { useGameTheme } from "@/components/theme/ThemeContext";
+
+const STRIP_THEME = {
+  light: { bar: "border-amber-200 bg-white/80", text: "text-stone-700", strong: "text-stone-900", log: "text-stone-500", banner: "border-amber-400 bg-amber-100 text-amber-700" },
+  dark: { bar: "border-white/10 bg-white/5", text: "text-stone-200", strong: "text-white", log: "text-stone-500", banner: "border-white/20 bg-white/10 text-stone-100" },
+  lime: { bar: "border-lime-300 bg-white/80", text: "text-lime-900", strong: "text-lime-950", log: "text-stone-500", banner: "border-lime-400 bg-lime-100 text-lime-800" },
+} as const;
 
 export function BattleGame({ cards }: { cards: Card[] }) {
   const battleCards = useMemo<BattleCard[]>(
@@ -20,20 +26,20 @@ export function BattleGame({ cards }: { cards: Card[] }) {
   );
 
   const { shaking, flashTarget } = getAttackEffects(state.lastAttack);
+  const { theme } = useGameTheme();
+  const st = STRIP_THEME[theme];
 
   if (state.phase === "NOT_ENOUGH_CARDS") {
     return (
-      <p className="text-sm text-stone-600">
+      <p className="text-sm opacity-70">
         No attacker cards exist yet — an admin needs to create at least one
         before a duel can start.
       </p>
     );
   }
 
-  const turnId: PlayerId = state.turn;
-  const otherId: PlayerId = turnId === "P1" ? "P2" : "P1";
-  const turnPlayer = state.players[turnId];
-  const otherPlayer = state.players[otherId];
+  const p1 = state.players.P1;
+  const p2 = state.players.P2;
 
   return (
     <div className="flex h-full flex-col gap-2">
@@ -42,8 +48,8 @@ export function BattleGame({ cards }: { cards: Card[] }) {
       </div>
 
       {state.phase === "GAME_OVER" && (
-        <div className="shrink-0 rounded-xl border border-amber-400 bg-amber-100 p-4 text-center">
-          <p className="text-lg font-semibold text-amber-700">
+        <div className={`shrink-0 rounded-xl border p-4 text-center ${st.banner}`}>
+          <p className="text-lg font-semibold">
             {state.winner} wins!
           </p>
           <button
@@ -60,70 +66,97 @@ export function BattleGame({ cards }: { cards: Card[] }) {
           shaking ? "animate-battle-shake" : ""
         }`}
       >
+        {/* Player 2 — always the top half (rotated), same full UI as Player
+            1 below, just gated by whose turn it is rather than hidden.
+            Local pass-and-play has both real players on one screen, so
+            there's no reason to hide either hand — only online needs that. */}
         <div className="min-h-0 flex-1">
           <PlayerZone
-            label={otherId === "P1" ? "Player 1" : "Player 2"}
-            isTurnHolder={false}
-            flashed={flashTarget === otherId}
-            active={otherPlayer.active}
-            bench={otherPlayer.bench}
-            discardCount={otherPlayer.discard.length}
-            deckCount={otherPlayer.deck.length}
-            energyPlayedThisTurn={otherPlayer.energyPlayedThisTurn}
-            supportPlayedThisTurn={otherPlayer.supportPlayedThisTurn}
-            hasSwitchedThisTurn={otherPlayer.hasSwitchedThisTurn}
-            interactive={false}
-            handCount={otherPlayer.hand.length}
+            label="Player 2"
+            isTurnHolder={state.turn === "P2" && state.phase === "IN_PROGRESS"}
+            flashed={flashTarget === "P2"}
+            active={p2.active}
+            bench={p2.bench}
+            discardCount={p2.discard.length}
+            deckCount={p2.deck.length}
+            energyPlayedThisTurn={p2.energyPlayedThisTurn}
+            supportPlayedThisTurn={p2.supportPlayedThisTurn}
+            hasSwitchedThisTurn={p2.hasSwitchedThisTurn}
+            interactive
+            hand={p2.hand}
+            isYourTurn={state.turn === "P2" && state.phase === "IN_PROGRESS"}
+            hasAttacked={state.hasAttacked}
+            opponentHasActive={Boolean(p1.active)}
+            onPlayAttacker={(handIndex) =>
+              dispatch({ type: "PLAY_ATTACKER", player: "P2", handIndex })
+            }
+            onPlayEnergy={(handIndex) =>
+              dispatch({ type: "PLAY_ENERGY", player: "P2", handIndex })
+            }
+            onPlaySupport={(handIndex) =>
+              dispatch({ type: "PLAY_SUPPORT", player: "P2", handIndex })
+            }
+            onAttack={(attackIndex) =>
+              dispatch({ type: "ATTACK", player: "P2", attackIndex })
+            }
+            onSwitch={(benchIndex) =>
+              dispatch({ type: "SWITCH_ACTIVE", player: "P2", benchIndex })
+            }
+            onEndTurn={() => dispatch({ type: "END_TURN", player: "P2" })}
             rotated
           />
         </div>
 
-        <div className="shrink-0 rounded-xl border border-amber-200 bg-white/80 px-3 py-1.5">
+        <div className={`shrink-0 rounded-xl border px-3 py-1.5 ${st.bar}`}>
           {state.phase === "IN_PROGRESS" && (
-            <p className="text-center text-xs text-stone-700">
-              Turn: <span className="font-semibold text-stone-900">{turnId}</span>
+            <p className={`text-center text-xs ${st.text}`}>
+              Turn:{" "}
+              <span className={`font-semibold ${st.strong}`}>
+                {state.turn === "P1" ? "Player 1" : "Player 2"}
+              </span>
             </p>
           )}
-          <div className="max-h-12 overflow-y-auto text-center text-[11px] text-stone-500">
+          <div className={`max-h-12 overflow-y-auto text-center text-[11px] ${st.log}`}>
             {state.log.slice(-3).map((line, i) => (
               <p key={i}>{line}</p>
             ))}
           </div>
         </div>
 
+        {/* Player 1 — always the bottom half. */}
         <div className="min-h-0 flex-1">
           <PlayerZone
-            label={`${turnId === "P1" ? "Player 1" : "Player 2"} (your turn)`}
-            isTurnHolder={true}
-            flashed={flashTarget === turnId}
-            active={turnPlayer.active}
-            bench={turnPlayer.bench}
-            discardCount={turnPlayer.discard.length}
-            deckCount={turnPlayer.deck.length}
-            energyPlayedThisTurn={turnPlayer.energyPlayedThisTurn}
-            supportPlayedThisTurn={turnPlayer.supportPlayedThisTurn}
-            hasSwitchedThisTurn={turnPlayer.hasSwitchedThisTurn}
+            label="Player 1"
+            isTurnHolder={state.turn === "P1" && state.phase === "IN_PROGRESS"}
+            flashed={flashTarget === "P1"}
+            active={p1.active}
+            bench={p1.bench}
+            discardCount={p1.discard.length}
+            deckCount={p1.deck.length}
+            energyPlayedThisTurn={p1.energyPlayedThisTurn}
+            supportPlayedThisTurn={p1.supportPlayedThisTurn}
+            hasSwitchedThisTurn={p1.hasSwitchedThisTurn}
             interactive
-            hand={turnPlayer.hand}
-            isYourTurn={state.phase === "IN_PROGRESS"}
+            hand={p1.hand}
+            isYourTurn={state.turn === "P1" && state.phase === "IN_PROGRESS"}
             hasAttacked={state.hasAttacked}
-            opponentHasActive={Boolean(otherPlayer.active)}
+            opponentHasActive={Boolean(p2.active)}
             onPlayAttacker={(handIndex) =>
-              dispatch({ type: "PLAY_ATTACKER", player: turnId, handIndex })
+              dispatch({ type: "PLAY_ATTACKER", player: "P1", handIndex })
             }
             onPlayEnergy={(handIndex) =>
-              dispatch({ type: "PLAY_ENERGY", player: turnId, handIndex })
+              dispatch({ type: "PLAY_ENERGY", player: "P1", handIndex })
             }
             onPlaySupport={(handIndex) =>
-              dispatch({ type: "PLAY_SUPPORT", player: turnId, handIndex })
+              dispatch({ type: "PLAY_SUPPORT", player: "P1", handIndex })
             }
             onAttack={(attackIndex) =>
-              dispatch({ type: "ATTACK", player: turnId, attackIndex })
+              dispatch({ type: "ATTACK", player: "P1", attackIndex })
             }
             onSwitch={(benchIndex) =>
-              dispatch({ type: "SWITCH_ACTIVE", player: turnId, benchIndex })
+              dispatch({ type: "SWITCH_ACTIVE", player: "P1", benchIndex })
             }
-            onEndTurn={() => dispatch({ type: "END_TURN", player: turnId })}
+            onEndTurn={() => dispatch({ type: "END_TURN", player: "P1" })}
           />
         </div>
       </div>

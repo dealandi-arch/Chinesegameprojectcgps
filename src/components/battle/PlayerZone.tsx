@@ -2,7 +2,35 @@
 
 import { CardFace } from "@/components/cards/CardFace";
 import { MAX_BENCH_SIZE } from "@/lib/battle/engine";
+import { useGameTheme } from "@/components/theme/ThemeContext";
 import type { BattleCard } from "@/lib/cards";
+
+const ZONE_THEME = {
+  light: {
+    turnHolder: "border-amber-400 bg-amber-100/70",
+    idle: "border-amber-200 bg-white/70",
+    label: "text-stone-800",
+    sub: "text-stone-500",
+    emptyBox: "border-amber-300 bg-white/40 text-stone-400",
+    endTurn: "bg-stone-700 text-white hover:bg-stone-600",
+  },
+  dark: {
+    turnHolder: "border-amber-400 bg-amber-500/10",
+    idle: "border-white/10 bg-white/5",
+    label: "text-white",
+    sub: "text-stone-400",
+    emptyBox: "border-white/20 bg-black/20 text-stone-500",
+    endTurn: "bg-stone-200 text-stone-900 hover:bg-white",
+  },
+  lime: {
+    turnHolder: "border-lime-500 bg-lime-100/80",
+    idle: "border-lime-300 bg-white/70",
+    label: "text-lime-950",
+    sub: "text-lime-700",
+    emptyBox: "border-lime-400 bg-white/40 text-lime-600",
+    endTurn: "bg-lime-700 text-white hover:bg-lime-600",
+  },
+} as const;
 
 // A play-mat half: label/deck info pinned at the outer edge, the active
 // card near the shared middle of the screen, and a bottom band with the
@@ -61,57 +89,74 @@ export function PlayerZone({
   onEndTurn?: () => void;
 }) {
   const canAct = interactive && isYourTurn && !moving;
+  const { theme } = useGameTheme();
+  const zt = ZONE_THEME[theme];
 
   return (
     <div
       className={`flex h-full flex-col rounded-2xl border p-2 shadow-sm transition-colors sm:p-3 ${
-        isTurnHolder
-          ? "border-amber-400 bg-amber-100/70"
-          : "border-amber-200 bg-white/70"
+        isTurnHolder ? zt.turnHolder : zt.idle
       } ${flashed ? "animate-battle-flash" : ""} ${rotated ? "rotate-180" : ""}`}
     >
       <div className="flex shrink-0 items-center justify-between text-xs">
-        <span className="font-semibold text-stone-800">
+        <span className={`font-semibold ${zt.label}`}>
           {label} {isTurnHolder && <span className="text-amber-600">●</span>}
         </span>
-        <span className="text-stone-500">
+        <span className={zt.sub}>
           Deck {deckCount} · Discard {discardCount}
         </span>
       </div>
 
-      {/* Active card — sits near the shared middle of the mat. No overflow
-          clipping here: the card and its attack buttons must always be
-          fully visible and clickable, never cut off. */}
-      <div className="flex min-h-0 flex-1 items-center justify-center">
+      {/* Active card — offset toward one side rather than centered, so the
+          two players' active cards (yours bottom-left, theirs top-right
+          once its whole zone is rotated 180°) can never collide near the
+          shared middle of the mat. No overflow clipping here: the card and
+          its attack buttons must always be fully visible and clickable. */}
+      <div className="flex min-h-0 flex-1 items-center justify-start pl-1 sm:pl-3">
         {active ? (
-          <div className="flex flex-col items-center gap-1.5">
+          <div className="flex flex-col items-start gap-1.5">
             <div className="w-32 sm:w-36">
-              <CardFace card={active} size="full" theme="light" />
+              <CardFace card={active} size="full" theme={theme} />
             </div>
             {interactive && (
-              <div className="flex flex-wrap justify-center gap-1.5">
+              <div className="flex flex-col gap-1">
                 {active.abilities.map((ability, i) => {
-                  const affordable =
-                    active.attachedEnergy >= (ability.energyCost ?? 0);
+                  const energyCost = ability.energyCost ?? 0;
+                  const affordable = active.attachedEnergy >= energyCost;
                   const canAttack =
                     canAct && !hasAttacked && affordable && opponentHasActive;
+                  let reason: string | null = null;
+                  if (canAct && !canAttack) {
+                    if (hasAttacked) reason = "Already attacked this turn";
+                    else if (!opponentHasActive) reason = "Opponent has no active card";
+                    else if (!affordable)
+                      reason = `Needs ${energyCost - active.attachedEnergy} more energy`;
+                  }
                   return (
-                    <button
-                      key={i}
-                      onClick={() => onAttack?.(i)}
-                      disabled={!canAttack}
-                      className="rounded-full bg-red-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-red-500 disabled:opacity-40"
-                    >
-                      {ability.name} — {ability.damage ?? 0} dmg (
-                      {ability.energyCost ?? 0}⚡)
-                    </button>
+                    <div key={i}>
+                      <button
+                        onClick={() => onAttack?.(i)}
+                        disabled={!canAttack}
+                        className="rounded-full bg-red-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-red-500 disabled:opacity-40"
+                      >
+                        {ability.name} — {ability.damage ?? 0} dmg (
+                        {ability.energyCost ?? 0}⚡)
+                      </button>
+                      {reason && (
+                        <p className={`mt-0.5 text-[10px] ${zt.sub}`}>
+                          {reason}
+                        </p>
+                      )}
+                    </div>
                   );
                 })}
               </div>
             )}
           </div>
         ) : (
-          <div className="flex h-24 w-20 items-center justify-center rounded-xl border border-dashed border-amber-300 bg-white/40 text-xs text-stone-400">
+          <div
+            className={`flex h-24 w-20 items-center justify-center rounded-xl border border-dashed text-xs ${zt.emptyBox}`}
+          >
             Empty
           </div>
         )}
@@ -120,13 +165,13 @@ export function PlayerZone({
       {/* Edge band — bench centered along the middle of the edge, hand in the corner */}
       <div className="flex shrink-0 items-end gap-2">
         <div className="flex flex-1 flex-col items-center gap-1">
-          <span className="text-xs font-medium text-stone-500">
+          <span className={`text-xs font-medium ${zt.sub}`}>
             Bench ({bench.length}/{MAX_BENCH_SIZE})
           </span>
           <div className="flex justify-center gap-1.5 overflow-x-auto">
             {bench.map((card, i) => (
               <div key={`${card.id}-${i}`} className="w-20 shrink-0 sm:w-24">
-                <CardFace card={card} size="compact" theme="light" />
+                <CardFace card={card} size="compact" theme={theme} />
                 {interactive && (
                   <button
                     onClick={() => onSwitch?.(i)}
@@ -142,7 +187,7 @@ export function PlayerZone({
         </div>
 
         <div className="flex shrink-0 flex-col items-center gap-1">
-          <span className="text-xs font-medium text-stone-500">
+          <span className={`text-xs font-medium ${zt.sub}`}>
             Hand ({interactive ? (hand?.length ?? 0) : (handCount ?? 0)})
           </span>
           <div className="flex justify-end gap-1.5 overflow-x-auto">
@@ -174,7 +219,7 @@ export function PlayerZone({
 
                   return (
                     <div key={`${card.id}-${i}`} className="w-20 shrink-0 sm:w-24">
-                      <CardFace card={card} size="compact" theme="light" />
+                      <CardFace card={card} size="compact" theme={theme} />
                       <button
                         onClick={onClick}
                         disabled={disabled}
@@ -202,7 +247,7 @@ export function PlayerZone({
           <button
             onClick={onEndTurn}
             disabled={!canAct}
-            className="rounded-full bg-stone-700 px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-stone-600 disabled:opacity-40"
+            className={`rounded-full px-4 py-1.5 text-xs font-semibold shadow-sm transition-colors disabled:opacity-40 ${zt.endTurn}`}
           >
             End Turn
           </button>

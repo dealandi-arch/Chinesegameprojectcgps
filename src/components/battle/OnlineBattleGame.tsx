@@ -7,11 +7,18 @@ import { PlayerZone } from "@/components/battle/PlayerZone";
 import { BattleLegend } from "@/components/battle/BattleLegend";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { getAttackEffects } from "@/components/battle/attackEffects";
+import { useGameTheme } from "@/components/theme/ThemeContext";
 import type { RedactedBattleState } from "@/lib/battle/redact";
 import type { BattleAction } from "@/lib/battle/types";
 
 type OnlineAction = Exclude<BattleAction, { type: "RESET" }>;
 type BattleStatus = "WAITING" | "ACTIVE" | "FINISHED";
+
+const STRIP_THEME = {
+  light: { bar: "border-amber-200 bg-white/80", text: "text-stone-700", log: "text-stone-500", chatBtn: "border-amber-300 text-stone-700 hover:border-amber-500", banner: "border-amber-400 bg-amber-100 text-amber-700" },
+  dark: { bar: "border-white/10 bg-white/5", text: "text-stone-200", log: "text-stone-500", chatBtn: "border-white/20 text-stone-300 hover:border-white/40", banner: "border-white/20 bg-white/10 text-stone-100" },
+  lime: { bar: "border-lime-300 bg-white/80", text: "text-lime-900", log: "text-stone-500", chatBtn: "border-lime-400 text-lime-800 hover:border-lime-600", banner: "border-lime-400 bg-lime-100 text-lime-800" },
+} as const;
 
 export function OnlineBattleGame({
   battleId,
@@ -58,6 +65,8 @@ export function OnlineBattleGame({
   }, [battleId]);
 
   const { shaking, flashTarget } = getAttackEffects(view?.lastAttack ?? null);
+  const { theme } = useGameTheme();
+  const st = STRIP_THEME[theme];
 
   async function submitMove(action: OnlineAction) {
     setError(null);
@@ -85,7 +94,7 @@ export function OnlineBattleGame({
 
   if (status === "WAITING" || !view) {
     return (
-      <p className="text-sm text-stone-600">Waiting for an opponent to join…</p>
+      <p className="text-sm opacity-70">Waiting for an opponent to join…</p>
     );
   }
 
@@ -101,8 +110,8 @@ export function OnlineBattleGame({
       {error && <p className="shrink-0 text-sm text-red-500">{error}</p>}
 
       {view.phase === "GAME_OVER" && (
-        <div className="shrink-0 rounded-xl border border-amber-400 bg-amber-100 p-4 text-center">
-          <p className="text-lg font-semibold text-amber-700">
+        <div className={`shrink-0 rounded-xl border p-4 text-center ${st.banner}`}>
+          <p className="text-lg font-semibold">
             {view.winner === view.yourPlayerId ? "You win!" : "You lose."}
           </p>
         </div>
@@ -131,13 +140,13 @@ export function OnlineBattleGame({
           />
         </div>
 
-        <div className="shrink-0 rounded-xl border border-amber-200 bg-white/80 px-3 py-1.5">
+        <div className={`shrink-0 rounded-xl border px-3 py-1.5 ${st.bar}`}>
           {view.phase === "IN_PROGRESS" && (
-            <p className="text-center text-xs text-stone-700">
+            <p className={`text-center text-xs ${st.text}`}>
               {isYourTurn ? "Your turn" : "Waiting for opponent…"}
             </p>
           )}
-          <div className="max-h-12 overflow-y-auto text-center text-[11px] text-stone-500">
+          <div className={`max-h-12 overflow-y-auto text-center text-[11px] ${st.log}`}>
             {view.log.slice(-3).map((line, i) => (
               <p key={i}>{line}</p>
             ))}
@@ -187,7 +196,7 @@ export function OnlineBattleGame({
       <div className="shrink-0">
         <button
           onClick={() => setChatOpen((v) => !v)}
-          className="rounded-full border border-amber-300 px-3 py-1.5 text-xs font-medium text-stone-700 transition-colors hover:border-amber-500"
+          className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${st.chatBtn}`}
         >
           💬 Chat {chatOpen ? "▲" : "▼"}
         </button>
@@ -196,7 +205,6 @@ export function OnlineBattleGame({
             <ChatPanel
               fetchAction={fetchBattleMessages}
               sendAction={sendBattleChatMessage}
-              theme="light"
               heightClass="h-56"
             />
           </div>

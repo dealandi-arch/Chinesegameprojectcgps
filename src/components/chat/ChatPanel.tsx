@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useGameTheme } from "@/components/theme/ThemeContext";
 import type { ChatMessage } from "@/lib/chat";
 import type { ChatActionResult } from "@/app/actions/chat";
 
@@ -11,7 +12,7 @@ const ROLE_TAG: Record<string, string> = {
   CO_ADMIN: "[Co-Admin] ",
 };
 
-type ChatTheme = "dark" | "light";
+type ChatTheme = "dark" | "light" | "lime";
 
 const THEME = {
   dark: {
@@ -32,16 +33,28 @@ const THEME = {
     input: "border-amber-200 bg-white text-stone-900 focus:border-amber-400",
     empty: "text-stone-400",
   },
+  lime: {
+    container: "border-lime-300 bg-white/80",
+    message: "text-stone-700",
+    username: "text-lime-950",
+    tag: "text-lime-700",
+    timestamp: "text-stone-400",
+    input: "border-lime-300 bg-white text-lime-950 focus:border-lime-500",
+    empty: "text-stone-400",
+  },
 } as const;
 
 export function ChatPanel({
   fetchAction,
   sendAction,
-  theme = "light",
+  theme,
   heightClass = "h-72",
 }: {
   fetchAction: () => Promise<ChatMessage[]>;
   sendAction: (body: string) => Promise<ChatActionResult>;
+  // Omit to follow the user's game theme picker (light/dark/lime); pass an
+  // explicit value to pin it regardless (the admin staff chat always
+  // passes "dark", independent of the game theme).
   theme?: ChatTheme;
   heightClass?: string;
 }) {
@@ -50,7 +63,8 @@ export function ChatPanel({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const t = THEME[theme];
+  const { theme: gameTheme } = useGameTheme();
+  const t = THEME[theme ?? gameTheme];
 
   useEffect(() => {
     let cancelled = false;

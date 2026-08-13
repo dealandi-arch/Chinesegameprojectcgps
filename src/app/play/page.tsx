@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { ThemedPage } from "@/components/theme/ThemedPage";
 
 export default async function PlaySelectorPage() {
   const currentUser = await getCurrentUser();
@@ -9,10 +10,10 @@ export default async function PlaySelectorPage() {
   }
 
   return (
-    <main className="flex-1 bg-gradient-to-b from-amber-50 via-orange-50 to-amber-100 px-6 py-12 text-stone-900 sm:px-12">
+    <ThemedPage className="flex-1 px-6 py-12 sm:px-12">
       <div className="mx-auto max-w-3xl text-center">
-        <h1 className="text-2xl font-bold text-stone-900">Choose Your Duel</h1>
-        <p className="mt-1 text-sm text-stone-600">Pick how you want to play.</p>
+        <h1 className="text-2xl font-bold">Choose Your Duel</h1>
+        <p className="mt-1 text-sm opacity-70">Pick how you want to play.</p>
 
         <div className="mt-10 grid gap-4 sm:grid-cols-3">
           <Link
@@ -50,6 +51,6 @@ export default async function PlaySelectorPage() {
           </Link>
         </div>
       </div>
-    </main>
+    </ThemedPage>
   );
 }

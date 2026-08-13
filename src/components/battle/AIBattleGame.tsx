@@ -7,12 +7,19 @@ import { toBattleCard, type Card, type BattleCard } from "@/lib/cards";
 import { PlayerZone } from "@/components/battle/PlayerZone";
 import { BattleLegend } from "@/components/battle/BattleLegend";
 import { getAttackEffects } from "@/components/battle/attackEffects";
+import { useGameTheme } from "@/components/theme/ThemeContext";
 import type { AiOpponent } from "@/lib/battle/aiRoster";
 import type { BattleAction, BattleState, PlayerId } from "@/lib/battle/types";
 
 const HUMAN: PlayerId = "P1";
 const AI: PlayerId = "P2";
 const AI_MOVE_DELAY_MS = 700;
+
+const STRIP_THEME = {
+  light: { bar: "border-amber-200 bg-white/80", text: "text-stone-700", log: "text-stone-500", banner: "border-amber-400 bg-amber-100 text-amber-700" },
+  dark: { bar: "border-white/10 bg-white/5", text: "text-stone-200", log: "text-stone-500", banner: "border-white/20 bg-white/10 text-stone-100" },
+  lime: { bar: "border-lime-300 bg-white/80", text: "text-lime-900", log: "text-stone-500", banner: "border-lime-400 bg-lime-100 text-lime-800" },
+} as const;
 
 type HumanAction = Exclude<BattleAction, { type: "RESET" }>;
 
@@ -67,10 +74,12 @@ export function AIBattleGame({
   }, [state.turn, state.phase, opponent.level]);
 
   const { shaking, flashTarget } = getAttackEffects(state.lastAttack);
+  const { theme } = useGameTheme();
+  const st = STRIP_THEME[theme];
 
   if (state.phase === "NOT_ENOUGH_CARDS") {
     return (
-      <p className="text-sm text-stone-600">
+      <p className="text-sm opacity-70">
         No attacker cards exist yet — an admin needs to create at least one
         before a duel can start.
       </p>
@@ -93,8 +102,8 @@ export function AIBattleGame({
       </div>
 
       {state.phase === "GAME_OVER" && (
-        <div className="shrink-0 rounded-xl border border-amber-400 bg-amber-100 p-4 text-center">
-          <p className="text-lg font-semibold text-amber-700">
+        <div className={`shrink-0 rounded-xl border p-4 text-center ${st.banner}`}>
+          <p className="text-lg font-semibold">
             {state.winner === HUMAN ? "You win!" : `${opponent.name} wins.`}
           </p>
           <button
@@ -131,13 +140,13 @@ export function AIBattleGame({
           />
         </div>
 
-        <div className="shrink-0 rounded-xl border border-amber-200 bg-white/80 px-3 py-1.5">
+        <div className={`shrink-0 rounded-xl border px-3 py-1.5 ${st.bar}`}>
           {state.phase === "IN_PROGRESS" && (
-            <p className="text-center text-xs text-stone-700">
+            <p className={`text-center text-xs ${st.text}`}>
               {isYourTurn ? "Your turn" : `${opponent.name} is thinking…`}
             </p>
           )}
-          <div className="max-h-12 overflow-y-auto text-center text-[11px] text-stone-500">
+          <div className={`max-h-12 overflow-y-auto text-center text-[11px] ${st.log}`}>
             {state.log.slice(-3).map((line, i) => (
               <p key={i}>{line}</p>
             ))}

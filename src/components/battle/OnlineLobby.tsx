@@ -3,9 +3,18 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBattle, joinBattle, getBattleView } from "@/app/actions/battles";
+import { useGameTheme } from "@/components/theme/ThemeContext";
+
+const LOBBY_THEME = {
+  light: { box: "border-amber-200 bg-white", heading: "text-stone-900", body: "text-stone-600", code: "text-red-700", input: "border-amber-200 bg-white text-stone-900 focus:border-amber-500", joinBtn: "border-amber-300 text-stone-700 hover:border-amber-500" },
+  dark: { box: "border-white/10 bg-white/5", heading: "text-white", body: "text-stone-400", code: "text-red-400", input: "border-white/15 bg-black/30 text-white focus:border-white/40", joinBtn: "border-white/20 text-stone-300 hover:border-white/40" },
+  lime: { box: "border-lime-300 bg-white", heading: "text-lime-950", body: "text-stone-600", code: "text-red-700", input: "border-lime-300 bg-white text-lime-950 focus:border-lime-500", joinBtn: "border-lime-400 text-lime-800 hover:border-lime-600" },
+} as const;
 
 export function OnlineLobby() {
   const router = useRouter();
+  const { theme } = useGameTheme();
+  const t = LOBBY_THEME[theme];
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
   const [waitingRoom, setWaitingRoom] = useState<{
@@ -63,12 +72,12 @@ export function OnlineLobby() {
 
   if (waitingRoom) {
     return (
-      <div className="rounded-2xl border border-amber-200 bg-white p-6 text-center shadow-sm">
-        <p className="text-sm text-stone-600">Share this code:</p>
-        <p className="mt-2 text-4xl font-bold tracking-widest text-red-700">
+      <div className={`rounded-2xl border p-6 text-center shadow-sm ${t.box}`}>
+        <p className={`text-sm ${t.body}`}>Share this code:</p>
+        <p className={`mt-2 text-4xl font-bold tracking-widest ${t.code}`}>
           {waitingRoom.joinCode}
         </p>
-        <p className="mt-4 text-sm text-stone-600">
+        <p className={`mt-4 text-sm ${t.body}`}>
           Waiting for an opponent to join…
         </p>
       </div>
@@ -77,9 +86,9 @@ export function OnlineLobby() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="rounded-2xl border border-amber-200 bg-white p-6 shadow-sm">
-        <h2 className="font-semibold text-stone-900">Create a Room</h2>
-        <p className="mt-1 text-sm text-stone-600">
+      <div className={`rounded-2xl border p-6 shadow-sm ${t.box}`}>
+        <h2 className={`font-semibold ${t.heading}`}>Create a Room</h2>
+        <p className={`mt-1 text-sm ${t.body}`}>
           Get a code to share with your opponent.
         </p>
         <button
@@ -91,9 +100,9 @@ export function OnlineLobby() {
         </button>
       </div>
 
-      <div className="rounded-2xl border border-amber-200 bg-white p-6 shadow-sm">
-        <h2 className="font-semibold text-stone-900">Join a Room</h2>
-        <p className="mt-1 text-sm text-stone-600">
+      <div className={`rounded-2xl border p-6 shadow-sm ${t.box}`}>
+        <h2 className={`font-semibold ${t.heading}`}>Join a Room</h2>
+        <p className={`mt-1 text-sm ${t.body}`}>
           Enter the code your opponent shared.
         </p>
         <div className="mt-4 flex gap-2">
@@ -103,12 +112,12 @@ export function OnlineLobby() {
             onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
             placeholder="ABC123"
             maxLength={6}
-            className="flex-1 rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm uppercase tracking-widest text-stone-900 outline-none focus:border-amber-500"
+            className={`flex-1 rounded-lg border px-3 py-2 text-sm uppercase tracking-widest outline-none ${t.input}`}
           />
           <button
             onClick={handleJoin}
             disabled={isPending}
-            className="rounded-full border border-amber-300 px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:border-amber-500 disabled:opacity-60"
+            className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors disabled:opacity-60 ${t.joinBtn}`}
           >
             {isPending ? "Joining…" : "Join"}
           </button>

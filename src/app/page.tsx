@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { ThemedPage } from "@/components/theme/ThemedPage";
 
 export default function Home() {
   return (
-    <div className="flex flex-1 flex-col bg-gradient-to-b from-amber-50 via-orange-50 to-amber-100 text-stone-900">
+    <ThemedPage as="div" className="flex flex-1 flex-col">
       {/* Hero */}
       <main className="relative flex flex-1 flex-col items-center justify-center px-6 py-16 text-center sm:px-12">
         <div
@@ -57,7 +58,7 @@ export default function Home() {
       <footer className="px-6 py-6 text-center text-xs text-stone-500 sm:px-12">
         Wok Quest is actively growing — new cards and modes coming soon.
       </footer>
-    </div>
+    </ThemedPage>
   );
 }
 
