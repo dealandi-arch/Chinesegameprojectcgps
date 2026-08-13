@@ -11,7 +11,7 @@ export default function Home() {
           className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[36rem] bg-[radial-gradient(ellipse_at_top,_rgba(217,119,6,0.18),_transparent_65%)]"
         />
 
-        <span className="mb-6 text-5xl">🃏</span>
+        <span className="mb-6 text-5xl">🍜</span>
 
         <h1 className="max-w-2xl text-4xl font-bold leading-tight tracking-tight text-stone-900 sm:text-6xl">
           Wok Quest
