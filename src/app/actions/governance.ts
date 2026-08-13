@@ -14,9 +14,9 @@ const REQUIRED_ROLE: Record<RoleVoteDirection, Role> = {
 };
 
 const REQUIRED_COUNT: Record<RoleVoteDirection, number> = {
-  PROMOTE: 3,
-  DEMOTE: 2,
-  PROMOTE_MEMBER: 2,
+  PROMOTE: 4,
+  DEMOTE: 4,
+  PROMOTE_MEMBER: 3,
 };
 
 const TARGET_ERROR: Record<RoleVoteDirection, string> = {

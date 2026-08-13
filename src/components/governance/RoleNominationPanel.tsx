@@ -32,10 +32,10 @@ export function RoleNominationPanel({
     <div>
       <h2 className="text-lg font-semibold text-white">Role Governance</h2>
       <p className="mt-1 text-sm text-stone-400">
-        Promoting a member to co-admin, or a co-admin to admin, needs 2 or 3
-        agreements from admins or co-admins respectively. Demoting an admin
-        back to co-admin needs 2 agreements. Starting a vote counts as your
-        own agreement — check Notifications to agree to open votes.
+        Promoting a member to co-admin needs 3 agreements from admins or
+        co-admins. Promoting a co-admin to admin, or demoting an admin back
+        to co-admin, needs 4 agreements. Starting a vote counts as your own
+        agreement — check Notifications to agree to open votes.
       </p>
 
       {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
