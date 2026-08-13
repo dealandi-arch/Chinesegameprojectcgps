@@ -56,8 +56,11 @@ export function CardFace({
   // full cards -- the image height used to be fixed at h-32 regardless of
   // size, which meant it got clipped/covered inside the narrow w-16/w-20
   // slots used for compact cards. Badges shrink to match so they don't
-  // cover most of a small image.
-  const imageHeight = compact ? "h-16" : "h-32";
+  // cover most of a small image. Full-size images are also shorter than
+  // before (h-24, not h-32) so the whole card -- image, abilities, and
+  // flavor text -- fits in the active-card slot without the page needing
+  // to scroll.
+  const imageHeight = compact ? "h-16" : "h-24";
   const badgeText = compact
     ? "px-1 py-px text-[9px]"
     : "px-2 py-0.5 text-xs";
@@ -117,17 +120,21 @@ export function CardFace({
           })()}
       </div>
 
-      <div className={compact ? "p-1.5" : "p-3"}>
+      <div className={compact ? "p-1.5" : "p-2"}>
         <h3
-          className={`truncate font-semibold ${compact ? "text-[11px]" : "text-sm"} ${t.title}`}
+          className={`font-semibold ${
+            compact ? "line-clamp-2 text-[10px] leading-tight" : "truncate text-sm"
+          } ${t.title}`}
         >
           {card.title}
         </h3>
 
         {!compact && (
-          <div className={`mt-2 border-t pt-2 ${t.divider}`}>
+          <div
+            className={`mt-1.5 max-h-24 overflow-y-auto border-t pt-1.5 ${t.divider}`}
+          >
             {card.role === "ATTACKER" && card.abilities.length > 0 && (
-              <ul className="mb-2 flex flex-col gap-1">
+              <ul className="mb-1.5 flex flex-col gap-1">
                 {card.abilities.map((ability, i) => (
                   <li key={i} className="text-xs text-stone-300">
                     <span className={`font-semibold ${t.abilityName}`}>
@@ -147,7 +154,7 @@ export function CardFace({
             )}
 
             {card.role === "SUPPORT" && card.abilities.length > 0 && (
-              <div className="mb-2 text-xs">
+              <div className="mb-1.5 text-xs">
                 <span className={`font-semibold ${t.abilityName}`}>
                   🎴 {card.abilities[0].name}
                 </span>

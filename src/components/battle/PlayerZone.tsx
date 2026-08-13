@@ -64,7 +64,7 @@ export function PlayerZone({
 
   return (
     <div
-      className={`flex h-full flex-col overflow-hidden rounded-2xl border p-2 shadow-sm transition-colors sm:p-3 ${
+      className={`flex h-full flex-col rounded-2xl border p-2 shadow-sm transition-colors sm:p-3 ${
         isTurnHolder
           ? "border-amber-400 bg-amber-100/70"
           : "border-amber-200 bg-white/70"
@@ -79,11 +79,13 @@ export function PlayerZone({
         </span>
       </div>
 
-      {/* Active card — sits near the shared middle of the mat */}
-      <div className="flex flex-1 items-center justify-center overflow-hidden">
+      {/* Active card — sits near the shared middle of the mat. No overflow
+          clipping here: the card and its attack buttons must always be
+          fully visible and clickable, never cut off. */}
+      <div className="flex min-h-0 flex-1 items-center justify-center">
         {active ? (
           <div className="flex flex-col items-center gap-1.5">
-            <div className="w-28 sm:w-32">
+            <div className="w-32 sm:w-36">
               <CardFace card={active} size="full" theme="light" />
             </div>
             {interactive && (
@@ -123,7 +125,7 @@ export function PlayerZone({
           </span>
           <div className="flex justify-center gap-1.5 overflow-x-auto">
             {bench.map((card, i) => (
-              <div key={`${card.id}-${i}`} className="w-16 shrink-0 sm:w-20">
+              <div key={`${card.id}-${i}`} className="w-20 shrink-0 sm:w-24">
                 <CardFace card={card} size="compact" theme="light" />
                 {interactive && (
                   <button
@@ -171,7 +173,7 @@ export function PlayerZone({
                   }
 
                   return (
-                    <div key={`${card.id}-${i}`} className="w-16 shrink-0 sm:w-20">
+                    <div key={`${card.id}-${i}`} className="w-20 shrink-0 sm:w-24">
                       <CardFace card={card} size="compact" theme="light" />
                       <button
                         onClick={onClick}
