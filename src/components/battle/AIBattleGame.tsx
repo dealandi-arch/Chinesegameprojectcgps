@@ -96,7 +96,7 @@ export function AIBattleGame({
   const isYourTurn = state.turn === HUMAN && state.phase === "IN_PROGRESS";
 
   return (
-    <div className="flex h-full flex-col gap-2">
+    <div className="flex h-full flex-col gap-1">
       <div className="shrink-0">
         <BattleLegend />
       </div>
@@ -140,14 +140,14 @@ export function AIBattleGame({
           />
         </div>
 
-        <div className={`shrink-0 rounded-xl border px-3 py-1.5 ${st.bar}`}>
+        <div className={`shrink-0 rounded-lg border px-2 py-0.5 ${st.bar}`}>
           {state.phase === "IN_PROGRESS" && (
-            <p className={`text-center text-xs ${st.text}`}>
+            <p className={`text-center text-[11px] ${st.text}`}>
               {isYourTurn ? "Your turn" : `${opponent.name} is thinking…`}
             </p>
           )}
-          <div className={`max-h-12 overflow-y-auto text-center text-[11px] ${st.log}`}>
-            {state.log.slice(-3).map((line, i) => (
+          <div className={`max-h-6 overflow-y-auto text-center text-[10px] ${st.log}`}>
+            {state.log.slice(-2).map((line, i) => (
               <p key={i}>{line}</p>
             ))}
           </div>

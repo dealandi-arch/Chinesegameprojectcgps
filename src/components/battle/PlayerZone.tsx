@@ -94,11 +94,11 @@ export function PlayerZone({
 
   return (
     <div
-      className={`flex h-full flex-col rounded-2xl border p-2 shadow-sm transition-colors sm:p-3 ${
+      className={`flex h-full flex-col rounded-2xl border p-1.5 shadow-sm transition-colors sm:p-2 ${
         isTurnHolder ? zt.turnHolder : zt.idle
       } ${flashed ? "animate-battle-flash" : ""} ${rotated ? "rotate-180" : ""}`}
     >
-      <div className="flex shrink-0 items-center justify-between text-xs">
+      <div className="flex shrink-0 items-center justify-between text-[11px]">
         <span className={`font-semibold ${zt.label}`}>
           {label} {isTurnHolder && <span className="text-amber-600">●</span>}
         </span>
@@ -166,9 +166,9 @@ export function PlayerZone({
       </div>
 
       {/* Edge band — bench centered along the middle of the edge, hand in the corner */}
-      <div className="flex shrink-0 items-end gap-2">
-        <div className="flex flex-1 flex-col items-center gap-1">
-          <span className={`text-xs font-medium ${zt.sub}`}>
+      <div className="flex shrink-0 items-end gap-1.5">
+        <div className="flex flex-1 flex-col items-center gap-0.5">
+          <span className={`text-[10px] font-medium ${zt.sub}`}>
             Bench ({bench.length}/{MAX_BENCH_SIZE})
           </span>
           <div className="flex justify-center gap-1.5 overflow-x-auto">
@@ -189,8 +189,8 @@ export function PlayerZone({
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-col items-center gap-1">
-          <span className={`text-xs font-medium ${zt.sub}`}>
+        <div className="flex shrink-0 flex-col items-center gap-0.5">
+          <span className={`text-[10px] font-medium ${zt.sub}`}>
             Hand ({interactive ? (hand?.length ?? 0) : (handCount ?? 0)})
           </span>
           <div className="flex justify-end gap-1.5 overflow-x-auto">
@@ -246,11 +246,11 @@ export function PlayerZone({
       </div>
 
       {interactive && (
-        <div className="mt-1.5 flex shrink-0 justify-center">
+        <div className="mt-1 flex shrink-0 justify-center">
           <button
             onClick={onEndTurn}
             disabled={!canAct}
-            className={`rounded-full px-4 py-1.5 text-xs font-semibold shadow-sm transition-colors disabled:opacity-40 ${zt.endTurn}`}
+            className={`rounded-full px-4 py-1 text-xs font-semibold shadow-sm transition-colors disabled:opacity-40 ${zt.endTurn}`}
           >
             End Turn
           </button>

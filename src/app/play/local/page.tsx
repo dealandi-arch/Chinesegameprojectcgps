@@ -13,15 +13,15 @@ export default async function LocalPlayPage() {
   const cards = await getBattleReadyCards();
 
   return (
-    <ThemedPage className="flex h-full flex-col overflow-hidden px-4 py-3 sm:px-8 sm:py-4">
+    <ThemedPage className="flex h-full flex-col overflow-hidden px-4 py-1.5 sm:px-8 sm:py-2">
       <div className="mx-auto flex h-full w-full max-w-5xl flex-col">
-        <div className="shrink-0">
-          <h1 className="text-xl font-bold sm:text-2xl">Local Duel</h1>
-          <p className="mt-0.5 text-xs opacity-70 sm:text-sm">
+        <div className="shrink-0 flex items-baseline gap-2">
+          <h1 className="text-sm font-bold sm:text-base">Local Duel</h1>
+          <p className="truncate text-[11px] opacity-70 sm:text-xs">
             Local pass-and-play — whoever&apos;s turn it is, act on this device.
           </p>
         </div>
-        <div className="mt-2 min-h-0 flex-1">
+        <div className="mt-1 min-h-0 flex-1">
           <BattleGame cards={cards} />
         </div>
       </div>

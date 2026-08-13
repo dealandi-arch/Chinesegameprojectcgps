@@ -15,10 +15,10 @@ export function BattleLegend() {
   const t = LEGEND_THEME[theme];
 
   return (
-    <div className={`rounded-xl border p-3 text-sm ${t.box}`}>
+    <div className={`rounded-lg border px-2.5 py-1 text-sm ${t.box}`}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`flex w-full items-center justify-between font-semibold ${t.heading}`}
+        className={`flex w-full items-center justify-between text-xs font-semibold ${t.heading}`}
       >
         How to Play
         <span className={`text-xs ${t.toggle}`}>{open ? "Hide" : "Show"}</span>

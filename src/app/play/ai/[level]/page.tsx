@@ -36,17 +36,17 @@ export default async function AiBattlePage({
   const cards = await getBattleReadyCards();
 
   return (
-    <ThemedPage className="flex h-full flex-col overflow-hidden px-4 py-3 sm:px-8 sm:py-4">
+    <ThemedPage className="flex h-full flex-col overflow-hidden px-4 py-1.5 sm:px-8 sm:py-2">
       <div className="mx-auto flex h-full w-full max-w-5xl flex-col">
-        <div className="shrink-0">
-          <h1 className="text-xl font-bold sm:text-2xl">
+        <div className="shrink-0 flex items-baseline gap-2">
+          <h1 className="truncate text-sm font-bold sm:text-base">
             You vs {opponent.emoji} {opponent.name} ({opponent.title})
           </h1>
-          <p className="mt-0.5 text-xs opacity-70 sm:text-sm">
+          <p className="shrink-0 text-[11px] opacity-70 sm:text-xs">
             Level {opponent.level} — {opponent.nameEn}
           </p>
         </div>
-        <div className="mt-2 min-h-0 flex-1">
+        <div className="mt-1 min-h-0 flex-1">
           <AIBattleGame cards={cards} opponent={opponent} />
         </div>
       </div>
