@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { agreeToRoleVote } from "@/app/actions/governance";
+import { agreeToRoleVote, disagreeWithRoleVote } from "@/app/actions/governance";
 import type { OpenRoleVote, RoleVoteDirection } from "@/lib/governance";
 import type { DirectoryUser } from "@/lib/users";
 
@@ -33,6 +33,14 @@ export function VoteNotificationList({
     });
   }
 
+  function disagree(voteId: string) {
+    setError(null);
+    startTransition(async () => {
+      const result = await disagreeWithRoleVote(voteId);
+      if (result.error) setError(result.error);
+    });
+  }
+
   if (openVotes.length === 0) {
     return <p className="text-sm text-stone-500">No open role votes.</p>;
   }
@@ -42,7 +50,9 @@ export function VoteNotificationList({
       {error && <p className="mb-2 text-sm text-red-400">{error}</p>}
       <div className="flex flex-col gap-3">
         {openVotes.map((vote) => {
-          const alreadyVoted = vote.ballotAdminIds.includes(currentUserId);
+          const alreadyVoted =
+            vote.yesVoterIds.includes(currentUserId) ||
+            vote.noVoterIds.includes(currentUserId);
           return (
             <div
               key={vote.id}
@@ -53,17 +63,27 @@ export function VoteNotificationList({
                   {usernameById.get(vote.targetUserId) ?? "unknown"}
                 </span>{" "}
                 <span className="text-stone-400">
-                  — {DIRECTION_LABEL[vote.direction]}{" "}
-                  — {vote.ballotAdminIds.length}/{vote.requiredCount} agreed
+                  — {DIRECTION_LABEL[vote.direction]} — {vote.netScore}/
+                  {vote.requiredCount} (✓{vote.yesVoterIds.length} · ✗
+                  {vote.noVoterIds.length})
                 </span>
               </div>
-              <button
-                onClick={() => agree(vote.id)}
-                disabled={isPending || alreadyVoted}
-                className="shrink-0 rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-stone-300 transition-colors hover:border-amber-400/50 disabled:opacity-50"
-              >
-                {alreadyVoted ? "Agreed" : "Agree"}
-              </button>
+              <div className="flex shrink-0 gap-2">
+                <button
+                  onClick={() => agree(vote.id)}
+                  disabled={isPending || alreadyVoted}
+                  className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-stone-300 transition-colors hover:border-emerald-400/50 disabled:opacity-50"
+                >
+                  Agree
+                </button>
+                <button
+                  onClick={() => disagree(vote.id)}
+                  disabled={isPending || alreadyVoted}
+                  className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-medium text-stone-300 transition-colors hover:border-red-400/50 disabled:opacity-50"
+                >
+                  No
+                </button>
+              </div>
             </div>
           );
         })}

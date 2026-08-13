@@ -87,7 +87,7 @@ export function AIBattleGame({
   const isYourTurn = state.turn === HUMAN && state.phase === "IN_PROGRESS";
 
   return (
-    <div className={`flex flex-col gap-4 ${shaking ? "animate-battle-shake" : ""}`}>
+    <div className="flex flex-col gap-2">
       <BattleLegend />
 
       {state.phase === "GAME_OVER" && (
@@ -106,67 +106,78 @@ export function AIBattleGame({
         </div>
       )}
 
-      <PlayerZone
-        label={`${opponent.emoji} ${opponent.name} · ${opponent.title}`}
-        isTurnHolder={state.turn === AI && state.phase === "IN_PROGRESS"}
-        flashed={flashTarget === AI}
-        active={ai.active}
-        bench={ai.bench}
-        discardCount={ai.discard.length}
-        deckCount={ai.deck.length}
-        energyPlayedThisTurn={ai.energyPlayedThisTurn}
-        supportPlayedThisTurn={ai.supportPlayedThisTurn}
-        hasSwitchedThisTurn={ai.hasSwitchedThisTurn}
-        interactive={false}
-        handCount={ai.hand.length}
-      />
+      <div
+        className={`flex h-[70vh] min-h-[560px] flex-col gap-1 overflow-hidden ${
+          shaking ? "animate-battle-shake" : ""
+        }`}
+      >
+        <div className="min-h-0 flex-1">
+          <PlayerZone
+            label={`${opponent.emoji} ${opponent.name} · ${opponent.title}`}
+            isTurnHolder={state.turn === AI && state.phase === "IN_PROGRESS"}
+            flashed={flashTarget === AI}
+            active={ai.active}
+            bench={ai.bench}
+            discardCount={ai.discard.length}
+            deckCount={ai.deck.length}
+            energyPlayedThisTurn={ai.energyPlayedThisTurn}
+            supportPlayedThisTurn={ai.supportPlayedThisTurn}
+            hasSwitchedThisTurn={ai.hasSwitchedThisTurn}
+            interactive={false}
+            handCount={ai.hand.length}
+            rotated
+          />
+        </div>
 
-      <div className="rounded-xl border border-amber-200 bg-white/70 p-3">
-        {state.phase === "IN_PROGRESS" && (
-          <p className="text-center text-sm text-stone-700">
-            {isYourTurn ? "Your turn" : `${opponent.name} is thinking…`}
-          </p>
-        )}
-        <div className="mt-2 max-h-24 overflow-y-auto text-xs text-stone-500">
-          {state.log.slice(-6).map((line, i) => (
-            <p key={i}>{line}</p>
-          ))}
+        <div className="shrink-0 rounded-xl border border-amber-200 bg-white/80 px-3 py-1.5">
+          {state.phase === "IN_PROGRESS" && (
+            <p className="text-center text-xs text-stone-700">
+              {isYourTurn ? "Your turn" : `${opponent.name} is thinking…`}
+            </p>
+          )}
+          <div className="max-h-12 overflow-y-auto text-center text-[11px] text-stone-500">
+            {state.log.slice(-3).map((line, i) => (
+              <p key={i}>{line}</p>
+            ))}
+          </div>
+        </div>
+
+        <div className="min-h-0 flex-1">
+          <PlayerZone
+            label="You"
+            isTurnHolder={isYourTurn}
+            flashed={flashTarget === HUMAN}
+            active={human.active}
+            bench={human.bench}
+            discardCount={human.discard.length}
+            deckCount={human.deck.length}
+            energyPlayedThisTurn={human.energyPlayedThisTurn}
+            supportPlayedThisTurn={human.supportPlayedThisTurn}
+            hasSwitchedThisTurn={human.hasSwitchedThisTurn}
+            interactive
+            hand={human.hand}
+            isYourTurn={isYourTurn}
+            hasAttacked={state.hasAttacked}
+            opponentHasActive={Boolean(ai.active)}
+            onPlayAttacker={(handIndex) =>
+              dispatchHuman({ type: "PLAY_ATTACKER", player: HUMAN, handIndex })
+            }
+            onPlayEnergy={(handIndex) =>
+              dispatchHuman({ type: "PLAY_ENERGY", player: HUMAN, handIndex })
+            }
+            onPlaySupport={(handIndex) =>
+              dispatchHuman({ type: "PLAY_SUPPORT", player: HUMAN, handIndex })
+            }
+            onAttack={(attackIndex) =>
+              dispatchHuman({ type: "ATTACK", player: HUMAN, attackIndex })
+            }
+            onSwitch={(benchIndex) =>
+              dispatchHuman({ type: "SWITCH_ACTIVE", player: HUMAN, benchIndex })
+            }
+            onEndTurn={() => dispatchHuman({ type: "END_TURN", player: HUMAN })}
+          />
         </div>
       </div>
-
-      <PlayerZone
-        label="You"
-        isTurnHolder={isYourTurn}
-        flashed={flashTarget === HUMAN}
-        active={human.active}
-        bench={human.bench}
-        discardCount={human.discard.length}
-        deckCount={human.deck.length}
-        energyPlayedThisTurn={human.energyPlayedThisTurn}
-        supportPlayedThisTurn={human.supportPlayedThisTurn}
-        hasSwitchedThisTurn={human.hasSwitchedThisTurn}
-        interactive
-        hand={human.hand}
-        isYourTurn={isYourTurn}
-        hasAttacked={state.hasAttacked}
-        opponentHasActive={Boolean(ai.active)}
-        onPlayAttacker={(handIndex) =>
-          dispatchHuman({ type: "PLAY_ATTACKER", player: HUMAN, handIndex })
-        }
-        onPlayEnergy={(handIndex) =>
-          dispatchHuman({ type: "PLAY_ENERGY", player: HUMAN, handIndex })
-        }
-        onPlaySupport={(handIndex) =>
-          dispatchHuman({ type: "PLAY_SUPPORT", player: HUMAN, handIndex })
-        }
-        onAttack={(attackIndex) =>
-          dispatchHuman({ type: "ATTACK", player: HUMAN, attackIndex })
-        }
-        onSwitch={(benchIndex) =>
-          dispatchHuman({ type: "SWITCH_ACTIVE", player: HUMAN, benchIndex })
-        }
-        onEndTurn={() => dispatchHuman({ type: "END_TURN", player: HUMAN })}
-      />
     </div>
   );
 }

@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getBattleView, submitBattleMove } from "@/app/actions/battles";
+import { getBattleMessages, sendBattleMessage } from "@/app/actions/chat";
 import { PlayerZone } from "@/components/battle/PlayerZone";
 import { BattleLegend } from "@/components/battle/BattleLegend";
+import { ChatPanel } from "@/components/chat/ChatPanel";
 import { getAttackEffects } from "@/components/battle/attackEffects";
 import type { RedactedBattleState } from "@/lib/battle/redact";
 import type { BattleAction } from "@/lib/battle/types";
@@ -27,11 +29,21 @@ export function OnlineBattleGame({
   const [status, setStatus] = useState(initialStatus);
   const [error, setError] = useState<string | null>(null);
   const [moving, setMoving] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
 
   const versionRef = useRef(version);
   useEffect(() => {
     versionRef.current = version;
   }, [version]);
+
+  const fetchBattleMessages = useMemo(
+    () => getBattleMessages.bind(null, battleId),
+    [battleId]
+  );
+  const sendBattleChatMessage = useMemo(
+    () => sendBattleMessage.bind(null, battleId),
+    [battleId]
+  );
 
   useEffect(() => {
     const interval = setInterval(async () => {
@@ -81,7 +93,7 @@ export function OnlineBattleGame({
   const opponentId = view.yourPlayerId === "P1" ? "P2" : "P1";
 
   return (
-    <div className={`flex flex-col gap-4 ${shaking ? "animate-battle-shake" : ""}`}>
+    <div className="flex flex-col gap-2">
       <BattleLegend />
 
       {error && <p className="text-sm text-red-500">{error}</p>}
@@ -94,70 +106,100 @@ export function OnlineBattleGame({
         </div>
       )}
 
-      <PlayerZone
-        label="Opponent"
-        isTurnHolder={!isYourTurn && view.phase === "IN_PROGRESS"}
-        flashed={flashTarget === opponentId}
-        active={view.opponent.active}
-        bench={view.opponent.bench}
-        discardCount={view.opponent.discard.length}
-        deckCount={view.opponent.deckCount}
-        energyPlayedThisTurn={view.opponent.energyPlayedThisTurn}
-        supportPlayedThisTurn={view.opponent.supportPlayedThisTurn}
-        hasSwitchedThisTurn={view.opponent.hasSwitchedThisTurn}
-        interactive={false}
-        handCount={view.opponent.handCount}
-      />
+      <div
+        className={`flex h-[70vh] min-h-[560px] flex-col gap-1 overflow-hidden ${
+          shaking ? "animate-battle-shake" : ""
+        }`}
+      >
+        <div className="min-h-0 flex-1">
+          <PlayerZone
+            label="Opponent"
+            isTurnHolder={!isYourTurn && view.phase === "IN_PROGRESS"}
+            flashed={flashTarget === opponentId}
+            active={view.opponent.active}
+            bench={view.opponent.bench}
+            discardCount={view.opponent.discard.length}
+            deckCount={view.opponent.deckCount}
+            energyPlayedThisTurn={view.opponent.energyPlayedThisTurn}
+            supportPlayedThisTurn={view.opponent.supportPlayedThisTurn}
+            hasSwitchedThisTurn={view.opponent.hasSwitchedThisTurn}
+            interactive={false}
+            handCount={view.opponent.handCount}
+            rotated
+          />
+        </div>
 
-      <div className="rounded-xl border border-amber-200 bg-white/70 p-3">
-        {view.phase === "IN_PROGRESS" && (
-          <p className="text-center text-sm text-stone-700">
-            {isYourTurn ? "Your turn" : "Waiting for opponent…"}
-          </p>
-        )}
-        <div className="mt-2 max-h-24 overflow-y-auto text-xs text-stone-500">
-          {view.log.slice(-6).map((line, i) => (
-            <p key={i}>{line}</p>
-          ))}
+        <div className="shrink-0 rounded-xl border border-amber-200 bg-white/80 px-3 py-1.5">
+          {view.phase === "IN_PROGRESS" && (
+            <p className="text-center text-xs text-stone-700">
+              {isYourTurn ? "Your turn" : "Waiting for opponent…"}
+            </p>
+          )}
+          <div className="max-h-12 overflow-y-auto text-center text-[11px] text-stone-500">
+            {view.log.slice(-3).map((line, i) => (
+              <p key={i}>{line}</p>
+            ))}
+          </div>
+        </div>
+
+        <div className="min-h-0 flex-1">
+          <PlayerZone
+            label="You"
+            isTurnHolder={isYourTurn && view.phase === "IN_PROGRESS"}
+            flashed={flashTarget === view.yourPlayerId}
+            active={view.you.active}
+            bench={view.you.bench}
+            discardCount={view.you.discard.length}
+            deckCount={view.you.deckCount}
+            energyPlayedThisTurn={view.you.energyPlayedThisTurn}
+            supportPlayedThisTurn={view.you.supportPlayedThisTurn}
+            hasSwitchedThisTurn={view.you.hasSwitchedThisTurn}
+            interactive
+            hand={view.you.hand}
+            isYourTurn={isYourTurn && !moving && view.phase === "IN_PROGRESS"}
+            hasAttacked={view.hasAttacked}
+            opponentHasActive={Boolean(view.opponent.active)}
+            moving={moving}
+            onPlayAttacker={(handIndex) =>
+              submitMove({ type: "PLAY_ATTACKER", player: view.yourPlayerId, handIndex })
+            }
+            onPlayEnergy={(handIndex) =>
+              submitMove({ type: "PLAY_ENERGY", player: view.yourPlayerId, handIndex })
+            }
+            onPlaySupport={(handIndex) =>
+              submitMove({ type: "PLAY_SUPPORT", player: view.yourPlayerId, handIndex })
+            }
+            onAttack={(attackIndex) =>
+              submitMove({ type: "ATTACK", player: view.yourPlayerId, attackIndex })
+            }
+            onSwitch={(benchIndex) =>
+              submitMove({ type: "SWITCH_ACTIVE", player: view.yourPlayerId, benchIndex })
+            }
+            onEndTurn={() =>
+              submitMove({ type: "END_TURN", player: view.yourPlayerId })
+            }
+          />
         </div>
       </div>
 
-      <PlayerZone
-        label="You"
-        isTurnHolder={isYourTurn && view.phase === "IN_PROGRESS"}
-        flashed={flashTarget === view.yourPlayerId}
-        active={view.you.active}
-        bench={view.you.bench}
-        discardCount={view.you.discard.length}
-        deckCount={view.you.deckCount}
-        energyPlayedThisTurn={view.you.energyPlayedThisTurn}
-        supportPlayedThisTurn={view.you.supportPlayedThisTurn}
-        hasSwitchedThisTurn={view.you.hasSwitchedThisTurn}
-        interactive
-        hand={view.you.hand}
-        isYourTurn={isYourTurn && !moving && view.phase === "IN_PROGRESS"}
-        hasAttacked={view.hasAttacked}
-        opponentHasActive={Boolean(view.opponent.active)}
-        moving={moving}
-        onPlayAttacker={(handIndex) =>
-          submitMove({ type: "PLAY_ATTACKER", player: view.yourPlayerId, handIndex })
-        }
-        onPlayEnergy={(handIndex) =>
-          submitMove({ type: "PLAY_ENERGY", player: view.yourPlayerId, handIndex })
-        }
-        onPlaySupport={(handIndex) =>
-          submitMove({ type: "PLAY_SUPPORT", player: view.yourPlayerId, handIndex })
-        }
-        onAttack={(attackIndex) =>
-          submitMove({ type: "ATTACK", player: view.yourPlayerId, attackIndex })
-        }
-        onSwitch={(benchIndex) =>
-          submitMove({ type: "SWITCH_ACTIVE", player: view.yourPlayerId, benchIndex })
-        }
-        onEndTurn={() =>
-          submitMove({ type: "END_TURN", player: view.yourPlayerId })
-        }
-      />
+      <div>
+        <button
+          onClick={() => setChatOpen((v) => !v)}
+          className="rounded-full border border-amber-300 px-3 py-1.5 text-xs font-medium text-stone-700 transition-colors hover:border-amber-500"
+        >
+          💬 Chat {chatOpen ? "▲" : "▼"}
+        </button>
+        {chatOpen && (
+          <div className="mt-2">
+            <ChatPanel
+              fetchAction={fetchBattleMessages}
+              sendAction={sendBattleChatMessage}
+              theme="light"
+              heightClass="h-56"
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

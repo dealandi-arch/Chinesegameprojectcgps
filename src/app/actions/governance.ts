@@ -93,26 +93,28 @@ export async function startRoleVote(
   return { error: null };
 }
 
-export async function agreeToRoleVote(
-  voteId: string
+async function castBallot(
+  voteId: string,
+  value: 1 | -1
 ): Promise<GovernanceActionResult> {
   const currentUser = await getCurrentUser();
   if (
     !currentUser ||
     (currentUser.role !== "ADMIN" && currentUser.role !== "CO_ADMIN")
   ) {
-    return { error: "Only admins and co-admins can agree to a role vote." };
+    return { error: "Only admins and co-admins can vote on a role vote." };
   }
 
   const adminClient = createAdminClient();
   const { data, error } = await adminClient.rpc("cast_role_vote_ballot", {
     p_vote_id: voteId,
     p_admin_id: currentUser.id,
+    p_value: value,
   });
 
   if (error) {
     if (error.message.includes("already_voted")) {
-      return { error: "You already agreed to this vote." };
+      return { error: "You already voted on this." };
     }
     if (error.message.includes("last_admin")) {
       return {
@@ -143,4 +145,16 @@ export async function agreeToRoleVote(
 
   revalidatePath("/admin");
   return { error: null };
+}
+
+export async function agreeToRoleVote(
+  voteId: string
+): Promise<GovernanceActionResult> {
+  return castBallot(voteId, 1);
+}
+
+export async function disagreeWithRoleVote(
+  voteId: string
+): Promise<GovernanceActionResult> {
+  return castBallot(voteId, -1);
 }

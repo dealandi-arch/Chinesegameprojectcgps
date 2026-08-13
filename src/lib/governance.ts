@@ -8,7 +8,9 @@ export type OpenRoleVote = {
   direction: RoleVoteDirection;
   requiredCount: number;
   initiatedBy: string;
-  ballotAdminIds: string[];
+  yesVoterIds: string[];
+  noVoterIds: string[];
+  netScore: number;
   createdAt: string;
 };
 
@@ -24,6 +26,7 @@ type RoleVoteRow = {
 type RoleVoteBallotRow = {
   vote_id: string;
   admin_id: string;
+  value: number;
 };
 
 export async function getOpenRoleVotes(): Promise<OpenRoleVote[]> {
@@ -39,28 +42,36 @@ export async function getOpenRoleVotes(): Promise<OpenRoleVote[]> {
   const voteRows = votes as RoleVoteRow[];
   const { data: ballots, error: ballotsError } = await adminClient
     .from("role_vote_ballots")
-    .select("vote_id, admin_id")
+    .select("vote_id, admin_id, value")
     .in(
       "vote_id",
       voteRows.map((v) => v.id)
     );
 
-  const ballotsByVote = new Map<string, string[]>();
+  const yesByVote = new Map<string, string[]>();
+  const noByVote = new Map<string, string[]>();
   if (!ballotsError && ballots) {
     for (const ballot of ballots as RoleVoteBallotRow[]) {
-      const list = ballotsByVote.get(ballot.vote_id) ?? [];
+      const target = ballot.value < 0 ? noByVote : yesByVote;
+      const list = target.get(ballot.vote_id) ?? [];
       list.push(ballot.admin_id);
-      ballotsByVote.set(ballot.vote_id, list);
+      target.set(ballot.vote_id, list);
     }
   }
 
-  return voteRows.map((v) => ({
-    id: v.id,
-    targetUserId: v.target_user_id,
-    direction: v.direction,
-    requiredCount: v.required_count,
-    initiatedBy: v.initiated_by,
-    ballotAdminIds: ballotsByVote.get(v.id) ?? [],
-    createdAt: v.created_at,
-  }));
+  return voteRows.map((v) => {
+    const yesVoterIds = yesByVote.get(v.id) ?? [];
+    const noVoterIds = noByVote.get(v.id) ?? [];
+    return {
+      id: v.id,
+      targetUserId: v.target_user_id,
+      direction: v.direction,
+      requiredCount: v.required_count,
+      initiatedBy: v.initiated_by,
+      yesVoterIds,
+      noVoterIds,
+      netScore: yesVoterIds.length - noVoterIds.length,
+      createdAt: v.created_at,
+    };
+  });
 }

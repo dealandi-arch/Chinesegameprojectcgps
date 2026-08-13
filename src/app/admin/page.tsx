@@ -14,6 +14,8 @@ import { VoteNotificationList } from "@/components/notifications/VoteNotificatio
 import { CardManager } from "@/components/cards/CardManager";
 import { PendingRequestList } from "@/components/cards/PendingRequestList";
 import { MyProposalsList } from "@/components/cards/MyProposalsList";
+import { ChatPanel } from "@/components/chat/ChatPanel";
+import { getStaffMessages, sendStaffMessage } from "@/app/actions/chat";
 
 export default async function AdminPage() {
   const currentUser = await getCurrentUser();
@@ -36,7 +38,9 @@ export default async function AdminPage() {
     ]);
 
   const votesNeedingMyVote = openVotes.filter(
-    (v) => !v.ballotAdminIds.includes(currentUser.id)
+    (v) =>
+      !v.yesVoterIds.includes(currentUser.id) &&
+      !v.noVoterIds.includes(currentUser.id)
   );
   const notificationBadge =
     votesNeedingMyVote.length +
@@ -118,6 +122,22 @@ export default async function AdminPage() {
     <CardManager mode={isAdmin ? "admin" : "propose"} cards={cards} />
   );
 
+  const chatTabContent = (
+    <div>
+      <h2 className="text-lg font-semibold text-white">Staff Chat</h2>
+      <p className="mt-1 text-sm text-stone-400">
+        Visible to admins and co-admins only.
+      </p>
+      <div className="mt-4">
+        <ChatPanel
+          fetchAction={getStaffMessages}
+          sendAction={sendStaffMessage}
+          theme="dark"
+        />
+      </div>
+    </div>
+  );
+
   return (
     <main className="flex-1 px-6 py-12 sm:px-12">
       <div className="mx-auto max-w-3xl">
@@ -140,6 +160,7 @@ export default async function AdminPage() {
               badge: notificationBadge,
             },
             { key: "cards", label: "Cards", content: cardsTabContent },
+            { key: "chat", label: "Chat", content: chatTabContent },
           ]}
         />
       </div>

@@ -4,6 +4,11 @@ import { CardFace } from "@/components/cards/CardFace";
 import { MAX_BENCH_SIZE } from "@/lib/battle/engine";
 import type { BattleCard } from "@/lib/cards";
 
+// A play-mat half: label/deck info pinned at the outer edge, the active
+// card near the shared middle of the screen, and a bottom band with the
+// bench centered along the edge and the hand tucked into the corner. For
+// the opponent's half this whole thing is rotated 180 degrees (via the
+// `rotated` prop) so it reads as sitting "across the table" from you.
 export function PlayerZone({
   label,
   isTurnHolder,
@@ -22,6 +27,7 @@ export function PlayerZone({
   hasAttacked = false,
   opponentHasActive = false,
   moving = false,
+  rotated = false,
   onPlayAttacker,
   onPlayEnergy,
   onPlaySupport,
@@ -46,6 +52,7 @@ export function PlayerZone({
   hasAttacked?: boolean;
   opponentHasActive?: boolean;
   moving?: boolean;
+  rotated?: boolean;
   onPlayAttacker?: (handIndex: number) => void;
   onPlayEnergy?: (handIndex: number) => void;
   onPlaySupport?: (handIndex: number) => void;
@@ -57,144 +64,139 @@ export function PlayerZone({
 
   return (
     <div
-      className={`rounded-2xl border p-4 shadow-sm transition-colors ${
+      className={`flex h-full flex-col overflow-hidden rounded-2xl border p-2 shadow-sm transition-colors sm:p-3 ${
         isTurnHolder
           ? "border-amber-400 bg-amber-100/70"
           : "border-amber-200 bg-white/70"
-      } ${flashed ? "animate-battle-flash" : ""}`}
+      } ${flashed ? "animate-battle-flash" : ""} ${rotated ? "rotate-180" : ""}`}
     >
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-stone-800">
-          {label}{" "}
-          {isTurnHolder && <span className="text-amber-600">(turn)</span>}
-        </h3>
-        <div className="text-xs text-stone-500">
+      <div className="flex shrink-0 items-center justify-between text-xs">
+        <span className="font-semibold text-stone-800">
+          {label} {isTurnHolder && <span className="text-amber-600">●</span>}
+        </span>
+        <span className="text-stone-500">
           Deck {deckCount} · Discard {discardCount}
-        </div>
+        </span>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-4">
-        <div className="w-36 shrink-0">
-          <span className="mb-1 block text-xs font-medium text-stone-500">
-            Active
-          </span>
-          {active ? (
-            <>
+      {/* Active card — sits near the shared middle of the mat */}
+      <div className="flex flex-1 items-center justify-center overflow-hidden">
+        {active ? (
+          <div className="flex flex-col items-center gap-1">
+            <div className="w-24 sm:w-28">
               <CardFace card={active} size="full" theme="light" />
-              {interactive && (
-                <div className="mt-2 flex flex-col gap-1">
-                  {active.abilities.map((ability, i) => {
-                    const affordable =
-                      active.attachedEnergy >= (ability.energyCost ?? 0);
-                    const canAttack =
-                      canAct && !hasAttacked && affordable && opponentHasActive;
-                    return (
-                      <button
-                        key={i}
-                        onClick={() => onAttack?.(i)}
-                        disabled={!canAttack}
-                        className="rounded-full bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-500 disabled:opacity-40"
-                      >
-                        {ability.name} — {ability.damage ?? 0} dmg (
-                        {ability.energyCost ?? 0}⚡)
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-amber-300 bg-white/40 text-xs text-stone-400">
-              Empty
             </div>
-          )}
-        </div>
+            {interactive && (
+              <div className="flex flex-wrap justify-center gap-1">
+                {active.abilities.map((ability, i) => {
+                  const affordable =
+                    active.attachedEnergy >= (ability.energyCost ?? 0);
+                  const canAttack =
+                    canAct && !hasAttacked && affordable && opponentHasActive;
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => onAttack?.(i)}
+                      disabled={!canAttack}
+                      className="rounded-full bg-red-600 px-2 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-red-500 disabled:opacity-40"
+                    >
+                      {ability.name} — {ability.damage ?? 0} dmg (
+                      {ability.energyCost ?? 0}⚡)
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex h-20 w-16 items-center justify-center rounded-xl border border-dashed border-amber-300 bg-white/40 text-[11px] text-stone-400">
+            Empty
+          </div>
+        )}
+      </div>
 
-        <div className="w-full sm:w-auto">
-          <span className="mb-1 block text-xs font-medium text-stone-500">
+      {/* Edge band — bench centered along the middle of the edge, hand in the corner */}
+      <div className="flex shrink-0 items-end gap-2">
+        <div className="flex flex-1 flex-col items-center gap-1">
+          <span className="text-[11px] font-medium text-stone-500">
             Bench ({bench.length}/{MAX_BENCH_SIZE})
           </span>
-          <div className="flex gap-2">
+          <div className="flex justify-center gap-1 overflow-x-auto">
             {bench.map((card, i) => (
-              <div key={`${card.id}-${i}`} className="w-24 shrink-0">
+              <div key={`${card.id}-${i}`} className="w-14 shrink-0 sm:w-16">
                 <CardFace card={card} size="compact" theme="light" />
                 {interactive && (
                   <button
                     onClick={() => onSwitch?.(i)}
                     disabled={!canAct || hasSwitchedThisTurn}
-                    className="mt-1 w-full rounded-full border border-amber-300 py-1 text-xs font-medium text-stone-600 transition-colors hover:border-amber-500 disabled:opacity-40"
+                    className="mt-0.5 w-full rounded-full border border-amber-300 py-0.5 text-[10px] font-medium text-stone-600 transition-colors hover:border-amber-500 disabled:opacity-40"
                   >
                     Switch In
                   </button>
                 )}
               </div>
             ))}
-            {bench.length === 0 && (
-              <p className="text-xs text-stone-400">No benched cards.</p>
-            )}
           </div>
         </div>
 
-        <div className="min-w-[200px] flex-1">
-          <span className="mb-1 block text-xs font-medium text-stone-500">
+        <div className="flex shrink-0 flex-col items-center gap-1">
+          <span className="text-[11px] font-medium text-stone-500">
             Hand ({interactive ? (hand?.length ?? 0) : (handCount ?? 0)})
           </span>
-          {interactive ? (
-            <div className="flex flex-wrap gap-2">
-              {(hand ?? []).map((card, i) => {
-                let actionLabel = "";
-                let disabled = !canAct;
-                let onClick = () => {};
+          <div className="flex justify-end gap-1 overflow-x-auto">
+            {interactive
+              ? (hand ?? []).map((card, i) => {
+                  let actionLabel = "";
+                  let disabled = !canAct;
+                  let onClick = () => {};
 
-                if (card.role === "ATTACKER") {
-                  actionLabel = "Play";
-                  disabled = disabled || (active !== null && bench.length >= MAX_BENCH_SIZE);
-                  onClick = () => onPlayAttacker?.(i);
-                } else if (card.role === "ENERGY") {
-                  actionLabel = "Attach";
-                  disabled = disabled || !active || energyPlayedThisTurn;
-                  onClick = () => onPlayEnergy?.(i);
-                } else {
-                  actionLabel = "Use";
-                  disabled = disabled || supportPlayedThisTurn;
-                  onClick = () => onPlaySupport?.(i);
-                }
+                  if (card.role === "ATTACKER") {
+                    actionLabel = "Play";
+                    disabled =
+                      disabled ||
+                      (active !== null && bench.length >= MAX_BENCH_SIZE);
+                    onClick = () => onPlayAttacker?.(i);
+                  } else if (card.role === "ENERGY") {
+                    actionLabel = "Attach";
+                    disabled = disabled || !active || energyPlayedThisTurn;
+                    onClick = () => onPlayEnergy?.(i);
+                  } else {
+                    actionLabel = "Use";
+                    disabled = disabled || supportPlayedThisTurn;
+                    onClick = () => onPlaySupport?.(i);
+                  }
 
-                return (
-                  <div key={`${card.id}-${i}`} className="w-24 shrink-0">
-                    <CardFace card={card} size="compact" theme="light" />
-                    <button
-                      onClick={onClick}
-                      disabled={disabled}
-                      className="mt-1 w-full rounded-full border border-amber-300 py-1 text-xs font-medium text-stone-600 transition-colors hover:border-amber-500 disabled:opacity-40"
-                    >
-                      {actionLabel}
-                    </button>
+                  return (
+                    <div key={`${card.id}-${i}`} className="w-14 shrink-0 sm:w-16">
+                      <CardFace card={card} size="compact" theme="light" />
+                      <button
+                        onClick={onClick}
+                        disabled={disabled}
+                        className="mt-0.5 w-full rounded-full border border-amber-300 py-0.5 text-[10px] font-medium text-stone-600 transition-colors hover:border-amber-500 disabled:opacity-40"
+                      >
+                        {actionLabel}
+                      </button>
+                    </div>
+                  );
+                })
+              : Array.from({ length: handCount ?? 0 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex h-16 w-11 shrink-0 items-center justify-center rounded-lg border border-amber-300 bg-gradient-to-br from-red-600 to-red-800 text-base text-amber-100 shadow-sm sm:h-20 sm:w-14"
+                  >
+                    🂠
                   </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {Array.from({ length: handCount ?? 0 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="flex h-28 w-20 items-center justify-center rounded-xl border border-amber-300 bg-gradient-to-br from-red-600 to-red-800 text-2xl text-amber-100 shadow-sm"
-                >
-                  🂠
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+          </div>
         </div>
       </div>
 
       {interactive && (
-        <div className="mt-3">
+        <div className="mt-1 flex shrink-0 justify-center">
           <button
             onClick={onEndTurn}
             disabled={!canAct}
-            className="rounded-full border border-stone-300 px-3 py-1.5 text-xs font-medium text-stone-600 transition-colors hover:border-stone-500 disabled:opacity-40"
+            className="rounded-full border border-stone-300 px-3 py-1 text-xs font-medium text-stone-600 transition-colors hover:border-stone-500 disabled:opacity-40"
           >
             End Turn
           </button>

@@ -17,7 +17,10 @@ export function SiteHeaderChrome({
   user: { username: string; role: Role } | null;
 }) {
   const pathname = usePathname();
-  const isGameRoute = pathname === "/" || pathname.startsWith("/play");
+  const isGameRoute =
+    pathname === "/" ||
+    pathname.startsWith("/play") ||
+    pathname.startsWith("/chat");
 
   const theme = isGameRoute
     ? {
@@ -55,6 +58,15 @@ export function SiteHeaderChrome({
             className={`rounded-full border px-4 py-1.5 text-xs font-medium transition-colors ${theme.pill}`}
           >
             Duel
+          </Link>
+        )}
+
+        {user && (
+          <Link
+            href="/chat"
+            className={`rounded-full border px-4 py-1.5 text-xs font-medium transition-colors ${theme.pill}`}
+          >
+            Chat
           </Link>
         )}
 
