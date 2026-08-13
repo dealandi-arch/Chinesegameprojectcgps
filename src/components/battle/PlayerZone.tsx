@@ -110,9 +110,12 @@ export function PlayerZone({
       {/* Active card — offset toward one side rather than centered, so the
           two players' active cards (yours bottom-left, theirs top-right
           once its whole zone is rotated 180°) can never collide near the
-          shared middle of the mat. No overflow clipping here: the card and
-          its attack buttons must always be fully visible and clickable. */}
-      <div className="flex min-h-0 flex-1 items-center justify-start pl-1 sm:pl-3">
+          shared middle of the mat. Anchored to the top (not centered) and
+          scrolls internally if the card + attack buttons are taller than
+          the available space, instead of overflowing into the bench/hand
+          row below and getting covered by it (which made attack buttons
+          unclickable). */}
+      <div className="flex min-h-0 flex-1 items-start justify-start overflow-y-auto pl-1 pt-1 sm:pl-3">
         {active ? (
           <div className="flex flex-col items-start gap-1.5">
             <div className="w-32 sm:w-36">
