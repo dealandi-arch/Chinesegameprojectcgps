@@ -50,28 +50,47 @@ export function CardFace({
   const image = card.imageUrls[0];
   const attachedEnergy = getAttachedEnergy(card);
   const t = THEME[theme];
+  const compact = size === "compact";
+
+  // Compact cards (bench/hand thumbnails) get a much shorter image than
+  // full cards -- the image height used to be fixed at h-32 regardless of
+  // size, which meant it got clipped/covered inside the narrow w-16/w-20
+  // slots used for compact cards. Badges shrink to match so they don't
+  // cover most of a small image.
+  const imageHeight = compact ? "h-16" : "h-32";
+  const badgeText = compact
+    ? "px-1 py-px text-[9px]"
+    : "px-2 py-0.5 text-xs";
 
   return (
     <div className={`overflow-hidden rounded-xl border ${t.outer}`}>
       <div className="relative">
         {image ? (
-          <img src={image} alt="" className="h-32 w-full object-cover" />
+          <img
+            src={image}
+            alt=""
+            className={`w-full object-cover ${imageHeight}`}
+          />
         ) : (
           <div
-            className={`flex h-32 w-full items-center justify-center text-3xl ${t.placeholder}`}
+            className={`flex w-full items-center justify-center text-3xl ${imageHeight} ${t.placeholder}`}
           >
             🥟
           </div>
         )}
 
         {card.cardType && (
-          <span className="absolute right-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-xs font-semibold text-stone-200">
+          <span
+            className={`absolute right-1 top-1 max-w-[70%] truncate rounded-full bg-black/70 font-semibold text-stone-200 ${badgeText}`}
+          >
             {card.cardType}
           </span>
         )}
 
         {card.role === "ENERGY" && (
-          <span className="absolute left-2 top-2 rounded-full bg-amber-600/90 px-2 py-0.5 text-xs font-bold text-white">
+          <span
+            className={`absolute left-1 top-1 rounded-full bg-amber-600/90 font-bold text-white ${badgeText}`}
+          >
             +{card.energyAmount}⚡
           </span>
         )}
@@ -80,12 +99,16 @@ export function CardFace({
           (() => {
             const { current, max } = getHp(card);
             return (
-              <div className="absolute bottom-2 left-2 flex gap-1">
-                <span className="rounded-full bg-emerald-600/90 px-2 py-0.5 text-xs font-bold text-white">
+              <div className="absolute bottom-1 left-1 flex gap-1">
+                <span
+                  className={`rounded-full bg-emerald-600/90 font-bold text-white ${badgeText}`}
+                >
                   ♥ {current}/{max}
                 </span>
-                {attachedEnergy !== null && attachedEnergy > 0 && (
-                  <span className="rounded-full bg-amber-600/90 px-2 py-0.5 text-xs font-bold text-white">
+                {!compact && attachedEnergy !== null && attachedEnergy > 0 && (
+                  <span
+                    className={`rounded-full bg-amber-600/90 font-bold text-white ${badgeText}`}
+                  >
                     ⚡ {attachedEnergy}
                   </span>
                 )}
@@ -94,15 +117,19 @@ export function CardFace({
           })()}
       </div>
 
-      <div className="p-3">
-        <h3 className={`text-sm font-semibold ${t.title}`}>{card.title}</h3>
+      <div className={compact ? "p-1.5" : "p-3"}>
+        <h3
+          className={`truncate font-semibold ${compact ? "text-[11px]" : "text-sm"} ${t.title}`}
+        >
+          {card.title}
+        </h3>
 
-        {size === "full" && (
+        {!compact && (
           <div className={`mt-2 border-t pt-2 ${t.divider}`}>
             {card.role === "ATTACKER" && card.abilities.length > 0 && (
               <ul className="mb-2 flex flex-col gap-1">
                 {card.abilities.map((ability, i) => (
-                  <li key={i} className="text-xs">
+                  <li key={i} className="text-xs text-stone-300">
                     <span className={`font-semibold ${t.abilityName}`}>
                       ⚔ {ability.name}
                     </span>{" "}
