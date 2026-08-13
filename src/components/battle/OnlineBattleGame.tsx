@@ -93,13 +93,15 @@ export function OnlineBattleGame({
   const opponentId = view.yourPlayerId === "P1" ? "P2" : "P1";
 
   return (
-    <div className="flex flex-col gap-2">
-      <BattleLegend />
+    <div className="flex h-full flex-col gap-2">
+      <div className="shrink-0">
+        <BattleLegend />
+      </div>
 
-      {error && <p className="text-sm text-red-500">{error}</p>}
+      {error && <p className="shrink-0 text-sm text-red-500">{error}</p>}
 
       {view.phase === "GAME_OVER" && (
-        <div className="rounded-xl border border-amber-400 bg-amber-100 p-4 text-center">
+        <div className="shrink-0 rounded-xl border border-amber-400 bg-amber-100 p-4 text-center">
           <p className="text-lg font-semibold text-amber-700">
             {view.winner === view.yourPlayerId ? "You win!" : "You lose."}
           </p>
@@ -107,7 +109,7 @@ export function OnlineBattleGame({
       )}
 
       <div
-        className={`flex h-[70vh] min-h-[560px] flex-col gap-1 overflow-hidden ${
+        className={`flex min-h-0 flex-1 flex-col gap-1 overflow-hidden ${
           shaking ? "animate-battle-shake" : ""
         }`}
       >
@@ -182,7 +184,7 @@ export function OnlineBattleGame({
         </div>
       </div>
 
-      <div>
+      <div className="shrink-0">
         <button
           onClick={() => setChatOpen((v) => !v)}
           className="rounded-full border border-amber-300 px-3 py-1.5 text-xs font-medium text-stone-700 transition-colors hover:border-amber-500"

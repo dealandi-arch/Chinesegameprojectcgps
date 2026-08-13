@@ -104,7 +104,9 @@ export function ChatPanel({
                 <span className={`font-semibold ${t.username}`}>
                   {m.senderUsername}
                 </span>
-                <span className={t.message}>: {m.body}</span>
+                <span className={`whitespace-pre-wrap break-words ${t.message}`}>
+                  : {m.body}
+                </span>
               </div>
             ))}
             <div ref={bottomRef} />
@@ -114,22 +116,25 @@ export function ChatPanel({
 
       {error && <p className="px-3 text-xs text-red-500">{error}</p>}
 
-      <div className="flex gap-2 border-t border-inherit p-2">
-        <input
-          type="text"
+      <div className="flex items-end gap-2 border-t border-inherit p-2">
+        <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") handleSend();
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSend();
+            }
           }}
-          placeholder="Type a message…"
-          maxLength={500}
-          className={`flex-1 rounded-lg border px-3 py-1.5 text-sm outline-none ${t.input}`}
+          placeholder="Type a message… (Shift+Enter for a new line)"
+          maxLength={4000}
+          rows={3}
+          className={`max-h-40 min-h-[4.5rem] flex-1 resize-y rounded-lg border px-3 py-2 text-sm outline-none ${t.input}`}
         />
         <button
           onClick={handleSend}
           disabled={sending || !input.trim()}
-          className="rounded-full bg-red-600 px-4 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-red-500 disabled:opacity-50"
+          className="shrink-0 rounded-full bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-500 disabled:opacity-50"
         >
           Send
         </button>

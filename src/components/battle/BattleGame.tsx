@@ -36,11 +36,13 @@ export function BattleGame({ cards }: { cards: Card[] }) {
   const otherPlayer = state.players[otherId];
 
   return (
-    <div className="flex flex-col gap-2">
-      <BattleLegend />
+    <div className="flex h-full flex-col gap-2">
+      <div className="shrink-0">
+        <BattleLegend />
+      </div>
 
       {state.phase === "GAME_OVER" && (
-        <div className="rounded-xl border border-amber-400 bg-amber-100 p-4 text-center">
+        <div className="shrink-0 rounded-xl border border-amber-400 bg-amber-100 p-4 text-center">
           <p className="text-lg font-semibold text-amber-700">
             {state.winner} wins!
           </p>
@@ -54,7 +56,7 @@ export function BattleGame({ cards }: { cards: Card[] }) {
       )}
 
       <div
-        className={`flex h-[70vh] min-h-[560px] flex-col gap-1 overflow-hidden ${
+        className={`flex min-h-0 flex-1 flex-col gap-1 overflow-hidden ${
           shaking ? "animate-battle-shake" : ""
         }`}
       >

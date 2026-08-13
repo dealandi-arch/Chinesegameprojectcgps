@@ -6,7 +6,7 @@ import { fetchChannelMessages, type ChatMessage } from "@/lib/chat";
 
 export type ChatActionResult = { error: string } | { error: null };
 
-const MAX_MESSAGE_LENGTH = 500;
+const MAX_MESSAGE_LENGTH = 4000;
 
 function validateBody(raw: string): { body: string } | { error: string } {
   const body = raw.trim();
@@ -32,7 +32,12 @@ async function insertMessage(
   });
 
   if (error) {
-    return { error: "Failed to send message. Try again." };
+    console.error("chat insertMessage failed:", error);
+    const hint =
+      error.code === "42P01"
+        ? " (chat_messages table not found — has migration_007_chat.sql been run?)"
+        : ` (${error.code ?? "unknown"}: ${error.message})`;
+    return { error: `Failed to send message.${hint}` };
   }
   return { error: null };
 }

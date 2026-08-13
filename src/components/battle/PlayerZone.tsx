@@ -82,12 +82,12 @@ export function PlayerZone({
       {/* Active card — sits near the shared middle of the mat */}
       <div className="flex flex-1 items-center justify-center overflow-hidden">
         {active ? (
-          <div className="flex flex-col items-center gap-1">
-            <div className="w-24 sm:w-28">
+          <div className="flex flex-col items-center gap-1.5">
+            <div className="w-28 sm:w-32">
               <CardFace card={active} size="full" theme="light" />
             </div>
             {interactive && (
-              <div className="flex flex-wrap justify-center gap-1">
+              <div className="flex flex-wrap justify-center gap-1.5">
                 {active.abilities.map((ability, i) => {
                   const affordable =
                     active.attachedEnergy >= (ability.energyCost ?? 0);
@@ -98,7 +98,7 @@ export function PlayerZone({
                       key={i}
                       onClick={() => onAttack?.(i)}
                       disabled={!canAttack}
-                      className="rounded-full bg-red-600 px-2 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-red-500 disabled:opacity-40"
+                      className="rounded-full bg-red-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-red-500 disabled:opacity-40"
                     >
                       {ability.name} — {ability.damage ?? 0} dmg (
                       {ability.energyCost ?? 0}⚡)
@@ -109,7 +109,7 @@ export function PlayerZone({
             )}
           </div>
         ) : (
-          <div className="flex h-20 w-16 items-center justify-center rounded-xl border border-dashed border-amber-300 bg-white/40 text-[11px] text-stone-400">
+          <div className="flex h-24 w-20 items-center justify-center rounded-xl border border-dashed border-amber-300 bg-white/40 text-xs text-stone-400">
             Empty
           </div>
         )}
@@ -118,18 +118,18 @@ export function PlayerZone({
       {/* Edge band — bench centered along the middle of the edge, hand in the corner */}
       <div className="flex shrink-0 items-end gap-2">
         <div className="flex flex-1 flex-col items-center gap-1">
-          <span className="text-[11px] font-medium text-stone-500">
+          <span className="text-xs font-medium text-stone-500">
             Bench ({bench.length}/{MAX_BENCH_SIZE})
           </span>
-          <div className="flex justify-center gap-1 overflow-x-auto">
+          <div className="flex justify-center gap-1.5 overflow-x-auto">
             {bench.map((card, i) => (
-              <div key={`${card.id}-${i}`} className="w-14 shrink-0 sm:w-16">
+              <div key={`${card.id}-${i}`} className="w-16 shrink-0 sm:w-20">
                 <CardFace card={card} size="compact" theme="light" />
                 {interactive && (
                   <button
                     onClick={() => onSwitch?.(i)}
                     disabled={!canAct || hasSwitchedThisTurn}
-                    className="mt-0.5 w-full rounded-full border border-amber-300 py-0.5 text-[10px] font-medium text-stone-600 transition-colors hover:border-amber-500 disabled:opacity-40"
+                    className="mt-1 w-full rounded-full bg-indigo-600 py-1 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 disabled:opacity-40"
                   >
                     Switch In
                   </button>
@@ -140,39 +140,43 @@ export function PlayerZone({
         </div>
 
         <div className="flex shrink-0 flex-col items-center gap-1">
-          <span className="text-[11px] font-medium text-stone-500">
+          <span className="text-xs font-medium text-stone-500">
             Hand ({interactive ? (hand?.length ?? 0) : (handCount ?? 0)})
           </span>
-          <div className="flex justify-end gap-1 overflow-x-auto">
+          <div className="flex justify-end gap-1.5 overflow-x-auto">
             {interactive
               ? (hand ?? []).map((card, i) => {
                   let actionLabel = "";
+                  let actionColor = "";
                   let disabled = !canAct;
                   let onClick = () => {};
 
                   if (card.role === "ATTACKER") {
                     actionLabel = "Play";
+                    actionColor = "bg-emerald-600 hover:bg-emerald-500";
                     disabled =
                       disabled ||
                       (active !== null && bench.length >= MAX_BENCH_SIZE);
                     onClick = () => onPlayAttacker?.(i);
                   } else if (card.role === "ENERGY") {
                     actionLabel = "Attach";
+                    actionColor = "bg-amber-500 hover:bg-amber-400";
                     disabled = disabled || !active || energyPlayedThisTurn;
                     onClick = () => onPlayEnergy?.(i);
                   } else {
                     actionLabel = "Use";
+                    actionColor = "bg-sky-600 hover:bg-sky-500";
                     disabled = disabled || supportPlayedThisTurn;
                     onClick = () => onPlaySupport?.(i);
                   }
 
                   return (
-                    <div key={`${card.id}-${i}`} className="w-14 shrink-0 sm:w-16">
+                    <div key={`${card.id}-${i}`} className="w-16 shrink-0 sm:w-20">
                       <CardFace card={card} size="compact" theme="light" />
                       <button
                         onClick={onClick}
                         disabled={disabled}
-                        className="mt-0.5 w-full rounded-full border border-amber-300 py-0.5 text-[10px] font-medium text-stone-600 transition-colors hover:border-amber-500 disabled:opacity-40"
+                        className={`mt-1 w-full rounded-full py-1 text-xs font-semibold text-white shadow-sm transition-colors disabled:opacity-40 ${actionColor}`}
                       >
                         {actionLabel}
                       </button>
@@ -182,7 +186,7 @@ export function PlayerZone({
               : Array.from({ length: handCount ?? 0 }).map((_, i) => (
                   <div
                     key={i}
-                    className="flex h-16 w-11 shrink-0 items-center justify-center rounded-lg border border-amber-300 bg-gradient-to-br from-red-600 to-red-800 text-base text-amber-100 shadow-sm sm:h-20 sm:w-14"
+                    className="flex h-20 w-14 shrink-0 items-center justify-center rounded-lg border border-amber-300 bg-gradient-to-br from-red-600 to-red-800 text-lg text-amber-100 shadow-sm sm:h-24 sm:w-16"
                   >
                     🂠
                   </div>
@@ -192,11 +196,11 @@ export function PlayerZone({
       </div>
 
       {interactive && (
-        <div className="mt-1 flex shrink-0 justify-center">
+        <div className="mt-1.5 flex shrink-0 justify-center">
           <button
             onClick={onEndTurn}
             disabled={!canAct}
-            className="rounded-full border border-stone-300 px-3 py-1 text-xs font-medium text-stone-600 transition-colors hover:border-stone-500 disabled:opacity-40"
+            className="rounded-full bg-stone-700 px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-stone-600 disabled:opacity-40"
           >
             End Turn
           </button>
