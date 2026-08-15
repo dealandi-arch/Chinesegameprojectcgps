@@ -33,6 +33,12 @@ export default function Home() {
           >
             Duel Now!
           </Link>
+          <Link
+            href="/info"
+            className="rounded-full border border-amber-300 px-8 py-3 text-base font-semibold text-stone-700 transition-colors hover:border-amber-500"
+          >
+            📖 Info
+          </Link>
         </div>
 
         {/* Feature cards */}

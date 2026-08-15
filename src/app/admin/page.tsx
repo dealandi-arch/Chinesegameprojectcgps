@@ -7,6 +7,11 @@ import {
   getMyPendingProposals,
 } from "@/lib/cards";
 import { getOpenRoleVotes } from "@/lib/governance";
+import {
+  getAllSlides,
+  getPendingSlideEditRequests,
+  getMySlideProposals,
+} from "@/lib/slides";
 import { AdminUserRow } from "@/components/AdminUserRow";
 import { AdminTabs } from "@/components/admin/AdminTabs";
 import { RoleNominationPanel } from "@/components/governance/RoleNominationPanel";
@@ -14,6 +19,9 @@ import { VoteNotificationList } from "@/components/notifications/VoteNotificatio
 import { CardManager } from "@/components/cards/CardManager";
 import { PendingRequestList } from "@/components/cards/PendingRequestList";
 import { MyProposalsList } from "@/components/cards/MyProposalsList";
+import { SlideManager } from "@/components/slides/SlideManager";
+import { PendingSlideRequestList } from "@/components/slides/PendingSlideRequestList";
+import { MySlideProposalsList } from "@/components/slides/MySlideProposalsList";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { getStaffMessages, sendStaffMessage } from "@/app/actions/chat";
 
@@ -28,14 +36,25 @@ export default async function AdminPage() {
 
   const isAdmin = currentUser.role === "ADMIN";
 
-  const [users, cards, pendingRequests, openVotes, myProposals] =
-    await Promise.all([
-      getAllUsers(),
-      getAllCards(),
-      isAdmin ? getPendingCardEditRequests() : Promise.resolve([]),
-      getOpenRoleVotes(),
-      isAdmin ? Promise.resolve([]) : getMyPendingProposals(currentUser.id),
-    ]);
+  const [
+    users,
+    cards,
+    pendingRequests,
+    openVotes,
+    myProposals,
+    slides,
+    pendingSlideRequests,
+    mySlideProposals,
+  ] = await Promise.all([
+    getAllUsers(),
+    getAllCards(),
+    isAdmin ? getPendingCardEditRequests() : Promise.resolve([]),
+    getOpenRoleVotes(),
+    isAdmin ? Promise.resolve([]) : getMyPendingProposals(currentUser.id),
+    getAllSlides(),
+    isAdmin ? getPendingSlideEditRequests() : Promise.resolve([]),
+    isAdmin ? Promise.resolve([]) : getMySlideProposals(currentUser.id),
+  ]);
 
   const votesNeedingMyVote = openVotes.filter(
     (v) =>
@@ -45,8 +64,9 @@ export default async function AdminPage() {
   const notificationBadge =
     votesNeedingMyVote.length +
     (isAdmin
-      ? pendingRequests.length
-      : myProposals.filter((p) => p.status !== "PENDING").length);
+      ? pendingRequests.length + pendingSlideRequests.length
+      : myProposals.filter((p) => p.status !== "PENDING").length +
+        mySlideProposals.filter((p) => p.status !== "PENDING").length);
 
   const usersTabContent = (
     <div>
@@ -94,17 +114,24 @@ export default async function AdminPage() {
         </div>
       </div>
       {isAdmin ? (
-        <PendingRequestList
-          requests={pendingRequests}
-          users={users}
-          cards={cards}
-        />
+        <>
+          <PendingRequestList
+            requests={pendingRequests}
+            users={users}
+            cards={cards}
+          />
+          <PendingSlideRequestList
+            requests={pendingSlideRequests}
+            users={users}
+            slides={slides}
+          />
+        </>
       ) : (
         <div>
           <h2 className="text-lg font-semibold text-white">
             Your Proposal Updates
           </h2>
-          <div className="mt-4">
+          <div className="mt-4 flex flex-col gap-8">
             {myProposals.length === 0 ? (
               <p className="text-sm text-stone-500">
                 You haven&apos;t proposed any card edits yet.
@@ -112,6 +139,7 @@ export default async function AdminPage() {
             ) : (
               <MyProposalsList proposals={myProposals} />
             )}
+            <MySlideProposalsList proposals={mySlideProposals} />
           </div>
         </div>
       )}
@@ -120,6 +148,10 @@ export default async function AdminPage() {
 
   const cardsTabContent = (
     <CardManager mode={isAdmin ? "admin" : "propose"} cards={cards} />
+  );
+
+  const slidesTabContent = (
+    <SlideManager mode={isAdmin ? "admin" : "propose"} slides={slides} />
   );
 
   const chatTabContent = (
@@ -160,6 +192,7 @@ export default async function AdminPage() {
               badge: notificationBadge,
             },
             { key: "cards", label: "Cards", content: cardsTabContent },
+            { key: "slides", label: "Slides", content: slidesTabContent },
             { key: "chat", label: "Chat", content: chatTabContent },
           ]}
         />

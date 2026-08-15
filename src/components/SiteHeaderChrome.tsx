@@ -62,7 +62,8 @@ export function SiteHeaderChrome({
   const isGameRoute =
     pathname === "/" ||
     pathname.startsWith("/play") ||
-    pathname.startsWith("/chat");
+    pathname.startsWith("/chat") ||
+    pathname.startsWith("/info");
 
   const theme = isGameRoute ? HEADER_THEME[gameTheme] : STAFF_THEME;
 
@@ -81,6 +82,13 @@ export function SiteHeaderChrome({
 
       <div className="flex items-center gap-3">
         {isGameRoute && user && <ThemeToggle />}
+
+        <Link
+          href="/info"
+          className={`rounded-full border px-4 py-1.5 text-xs font-medium transition-colors ${theme.pill}`}
+        >
+          Info
+        </Link>
 
         {user && (
           <Link
