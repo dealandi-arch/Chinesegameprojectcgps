@@ -5,6 +5,7 @@ import { battleReducer, createInitialState } from "@/lib/battle/engine";
 import { toBattleCard, type Card, type BattleCard } from "@/lib/cards";
 import { PlayerZone } from "@/components/battle/PlayerZone";
 import { BattleLegend } from "@/components/battle/BattleLegend";
+import { BattleLog } from "@/components/battle/BattleLog";
 import { getAttackEffects } from "@/components/battle/attackEffects";
 import { useGameTheme } from "@/components/theme/ThemeContext";
 
@@ -116,11 +117,7 @@ export function BattleGame({ cards }: { cards: Card[] }) {
               </span>
             </p>
           )}
-          <div className={`max-h-6 overflow-y-auto text-center text-[10px] ${st.log}`}>
-            {state.log.slice(-2).map((line, i) => (
-              <p key={i}>{line}</p>
-            ))}
-          </div>
+          <BattleLog log={state.log} className={st.log} />
         </div>
 
         {/* Player 1 — always the bottom half. */}

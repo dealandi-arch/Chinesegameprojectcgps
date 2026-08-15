@@ -60,14 +60,37 @@ export function chooseAIAction(
     me.hand.forEach((card, i) => {
       if (card.role !== "ENERGY") return;
       const active = me.active!;
+      const maxAbilityCost = active.abilities.reduce(
+        (max, a) => Math.max(max, a.energyCost ?? 0),
+        0
+      );
+      // Once attachedEnergy already covers the priciest attack this card
+      // has, more energy does nothing -- score it low instead of a flat
+      // "banked" value, so the AI stops hoarding energy it can never
+      // spend and attacks with what it already earned instead.
+      const alreadyMaxed = active.attachedEnergy >= maxAbilityCost;
+      const canAffordAnyAttackNow = active.abilities.some(
+        (a) => (a.energyCost ?? 0) <= active.attachedEnergy
+      );
       const unlocksAttack = active.abilities.some(
         (a) =>
           (a.energyCost ?? 0) > active.attachedEnergy &&
           active.attachedEnergy + card.energyAmount >= (a.energyCost ?? 0)
       );
+      // A real, already-affordable attack must not lose out to "banking
+      // energy toward something bigger" -- that flat trade only makes
+      // sense when the active can't attack for anything at all yet. When
+      // an attack is already on the table, deliberately saving up for a
+      // bigger one is left entirely to the survival-checked levels 5-7
+      // lookahead below, not to a blanket score here.
+      let score: number;
+      if (alreadyMaxed) score = -10;
+      else if (unlocksAttack && !canAffordAnyAttackNow) score = 40;
+      else if (unlocksAttack) score = 6;
+      else score = 8;
       candidates.push({
         action: { type: "PLAY_ENERGY", player: aiPlayer, handIndex: i },
-        score: unlocksAttack ? 40 : 8,
+        score,
       });
     });
   }
@@ -82,17 +105,38 @@ export function chooseAIAction(
       let score: number | null = null;
 
       switch (effect.effectType) {
+        // The AI never plays Draw-effect Support cards -- drawing extra
+        // cards on top of its normal turn draw reads as an unfair edge
+        // over a human opponent even though the card itself is legal for
+        // either side. The card stays fully usable by human players; this
+        // only removes it from the AI's own candidate list, at every
+        // level (including "mistake" picks, since a card never added as a
+        // candidate can never be randomly selected either).
         case "DRAW":
-          score = 12 + magnitude * 2;
-          break;
+          return;
         case "HEAL":
           if (!me.active) return;
           score = (1 - me.active.currentHp / me.active.maxHp) * 60;
           break;
-        case "ADD_ENERGY":
+        case "ADD_ENERGY": {
           if (!me.active) return;
-          score = 15 + magnitude * 10;
+          const maxAbilityCost = me.active.abilities.reduce(
+            (max, a) => Math.max(max, a.energyCost ?? 0),
+            0
+          );
+          const alreadyMaxed = me.active.attachedEnergy >= maxAbilityCost;
+          const canAffordAnyAttackNow = me.active.abilities.some(
+            (a) => (a.energyCost ?? 0) <= me.active!.attachedEnergy
+          );
+          // Same rule as Play Energy above: only bank aggressively when
+          // there's no real attack to take yet.
+          score = alreadyMaxed
+            ? -5
+            : canAffordAnyAttackNow
+              ? 5
+              : 15 + magnitude * 10;
           break;
+        }
         case "BOOST_DAMAGE": {
           const canAttackNow =
             me.active !== null &&

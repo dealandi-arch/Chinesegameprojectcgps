@@ -140,9 +140,13 @@ export function CardFace({
         </h3>
 
         {!compact && (
-          <div
-            className={`mt-1.5 max-h-24 overflow-y-auto border-t pt-1.5 ${t.divider}`}
-          >
+          // No height cap/scroll here -- abilities (and their damage
+          // numbers) must always be fully visible, never hidden behind a
+          // small nested scrollbar a player could easily miss, especially
+          // on a read-only opponent card that has no other way to reveal
+          // a second ability's damage. The outer active-card zone already
+          // provides the one fallback scroll if a card ever runs long.
+          <div className={`mt-1.5 border-t pt-1.5 ${t.divider}`}>
             {card.role === "ATTACKER" && card.abilities.length > 0 && (
               <ul className="mb-1.5 flex flex-col gap-1">
                 {card.abilities.map((ability, i) => (

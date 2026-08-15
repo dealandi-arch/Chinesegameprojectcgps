@@ -41,6 +41,18 @@ function buildDeck(pool: BattleCard[]): BattleCard[] {
     }
   }
 
+  // If the unique Attacker/Support pool is too small to hit the non-energy
+  // target even at the per-card copy cap, keep repeating existing
+  // non-energy cards past the cap instead of letting the shortfall spill
+  // into extra Energy cards below -- otherwise a small card pool silently
+  // skews decks toward mostly Energy, handing out attachable energy
+  // through deck-composition luck instead of real per-turn play.
+  while (deck.length < nonEnergyTarget && nonEnergyCards.length > 0) {
+    const pick =
+      nonEnergyCards[Math.floor(Math.random() * nonEnergyCards.length)];
+    deck.push({ ...pick });
+  }
+
   while (deck.length < DECK_SIZE && energyCards.length > 0) {
     const pick = energyCards[Math.floor(Math.random() * energyCards.length)];
     deck.push({ ...pick });

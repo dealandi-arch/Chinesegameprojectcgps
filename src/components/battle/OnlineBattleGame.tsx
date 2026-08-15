@@ -5,6 +5,7 @@ import { getBattleView, submitBattleMove } from "@/app/actions/battles";
 import { getBattleMessages, sendBattleMessage } from "@/app/actions/chat";
 import { PlayerZone } from "@/components/battle/PlayerZone";
 import { BattleLegend } from "@/components/battle/BattleLegend";
+import { BattleLog } from "@/components/battle/BattleLog";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { getAttackEffects } from "@/components/battle/attackEffects";
 import { useGameTheme } from "@/components/theme/ThemeContext";
@@ -146,11 +147,7 @@ export function OnlineBattleGame({
               {isYourTurn ? "Your turn" : "Waiting for opponent…"}
             </p>
           )}
-          <div className={`max-h-6 overflow-y-auto text-center text-[10px] ${st.log}`}>
-            {view.log.slice(-2).map((line, i) => (
-              <p key={i}>{line}</p>
-            ))}
-          </div>
+          <BattleLog log={view.log} className={st.log} />
         </div>
 
         <div className="min-h-0 flex-1">
