@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { fetchChannelMessages, type ChatMessage } from "@/lib/chat";
@@ -82,6 +83,64 @@ export async function sendStaffMessage(body: string): Promise<ChatActionResult> 
   if ("error" in validated) return validated;
 
   return insertMessage("STAFF", null, currentUser.id, validated.body);
+}
+
+// Staff-chat moderation is super-admin only: ordinary admins and
+// co-admins can post in staff chat but can't erase what was said there.
+async function requireSuperAdmin(): Promise<{ error: string } | null> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser?.isSuperAdmin) {
+    return { error: "Only a super admin can delete staff chat messages." };
+  }
+  return null;
+}
+
+export async function deleteStaffMessage(
+  messageId: string
+): Promise<ChatActionResult> {
+  const denied = await requireSuperAdmin();
+  if (denied) return denied;
+
+  const adminClient = createAdminClient();
+  // Scoped to the STAFF channel so this can never be turned into a
+  // delete-any-message-anywhere tool by passing another channel's id.
+  const { data, error } = await adminClient
+    .from("chat_messages")
+    .delete()
+    .eq("id", messageId)
+    .eq("channel_type", "STAFF")
+    .select("id");
+
+  if (error) {
+    console.error("chat deleteStaffMessage failed:", error);
+    return { error: "Failed to delete message. Try again." };
+  }
+  if (!data || data.length === 0) {
+    return { error: "That message no longer exists." };
+  }
+
+  revalidatePath("/admin");
+  return { error: null };
+}
+
+export async function clearStaffChat(): Promise<ChatActionResult> {
+  const denied = await requireSuperAdmin();
+  if (denied) return denied;
+
+  const adminClient = createAdminClient();
+  const { error } = await adminClient
+    .from("chat_messages")
+    .delete()
+    .eq("channel_type", "STAFF")
+    .is("channel_id", null);
+
+  if (error) {
+    console.error("chat clearStaffChat failed:", error);
+    return { error: "Failed to clear staff chat. Try again." };
+  }
+
+  revalidatePath("/admin");
+  return { error: null };
 }
 
 async function isBattleParticipant(

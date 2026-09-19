@@ -11,6 +11,8 @@ const ROLE_STYLES: Record<Role, string> = {
   USER: "bg-white/10 text-stone-300",
 };
 
+const SUPER_ADMIN_STYLE = "bg-red-400/20 text-red-300";
+
 const ROLE_LABEL: Record<Role, string> = {
   ADMIN: "Admin",
   CO_ADMIN: "Co-Admin",
@@ -21,12 +23,14 @@ export function AdminUserRow({
   id,
   username,
   role,
+  isSuperAdmin = false,
   createdAt,
   canManage,
 }: {
   id: string;
   username: string;
   role: Role;
+  isSuperAdmin?: boolean;
   createdAt: string;
   canManage: boolean;
 }) {
@@ -46,16 +50,18 @@ export function AdminUserRow({
       <td className="py-3 pr-4 text-sm text-white">{username}</td>
       <td className="py-3 pr-4">
         <span
-          className={`rounded-full px-3 py-1 text-xs font-medium ${ROLE_STYLES[role]}`}
+          className={`rounded-full px-3 py-1 text-xs font-medium ${
+            isSuperAdmin ? SUPER_ADMIN_STYLE : ROLE_STYLES[role]
+          }`}
         >
-          {ROLE_LABEL[role]}
+          {isSuperAdmin ? "Super Admin" : ROLE_LABEL[role]}
         </span>
       </td>
       <td className="py-3 pr-4 text-xs text-stone-500">
         {new Date(createdAt).toLocaleDateString("en-US")}
       </td>
       <td className="py-3 text-right">
-        {canManage && role === "CO_ADMIN" ? (
+        {canManage && role === "CO_ADMIN" && !isSuperAdmin ? (
           <button
             onClick={demote}
             disabled={isPending}

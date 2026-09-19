@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getCurrentUser, type Role } from "@/lib/auth";
+import { getCurrentUser, readIsSuperAdmin, type Role } from "@/lib/auth";
 import { createAdminClient } from "@/utils/supabase/admin";
 import type { RoleVoteDirection } from "@/lib/governance";
 
@@ -50,6 +50,13 @@ export async function startRoleVote(
   }
 
   if (direction === "DEMOTE") {
+    // A super admin holds powers ordinary admins don't (staff-chat
+    // moderation), so they can't be voted out of the admin role -- the
+    // same spirit as the last-admin guard below.
+    if (readIsSuperAdmin(data.user.app_metadata)) {
+      return { error: "A super admin cannot be demoted." };
+    }
+
     const { data: usersData, error: listError } =
       await adminClient.auth.admin.listUsers({ perPage: 200 });
     const adminCount = listError
@@ -131,7 +138,18 @@ async function castBallot(
   if (outcome?.result === "PASSED") {
     const { data: targetData, error: targetError } =
       await adminClient.auth.admin.getUserById(outcome.target_user_id);
-    if (!targetError && targetData.user) {
+    if (
+      !targetError &&
+      targetData.user &&
+      // Backstop for a demotion vote opened before the target became a
+      // super admin: startRoleVote blocks new ones, this stops an old one
+      // from landing. app_metadata is spread below, so the super_admin
+      // flag survives every role change either way.
+      !(
+        outcome.direction === "DEMOTE" &&
+        readIsSuperAdmin(targetData.user.app_metadata)
+      )
+    ) {
       const newRole: Role =
         outcome.direction === "PROMOTE" ? "ADMIN" : "CO_ADMIN";
       await adminClient.auth.admin.updateUserById(outcome.target_user_id, {

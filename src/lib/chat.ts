@@ -9,6 +9,7 @@ export type ChatMessage = {
   senderId: string;
   senderUsername: string;
   senderRole: Role;
+  senderIsSuperAdmin: boolean;
   body: string;
   createdAt: string;
 };
@@ -50,6 +51,7 @@ export async function fetchChannelMessages(
         senderId: row.sender_id,
         senderUsername: sender?.username ?? "unknown",
         senderRole: sender?.role ?? "USER",
+        senderIsSuperAdmin: sender?.isSuperAdmin ?? false,
         body: row.body,
         createdAt: row.created_at,
       };

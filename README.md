@@ -23,6 +23,8 @@ A Chinese cooking game project, built with [Next.js](https://nextjs.org) and [Su
    - `ADMIN_CODE` — the secret code that grants admin status when entered on
      the "Create Profile" form. Ask the project owner for the real value;
      never commit it.
+   - `SUPER_ADMIN_CODE` — optional. Same field on the same form, but grants
+     super admin (see below). Leave it unset to disable super-admin signup.
 
 3. Run the development server:
 
@@ -44,6 +46,13 @@ on your Supabase project.
   entered in the "Enter your admin code" field on the Create Profile form.
   Leaving it blank or entering it incorrectly just creates a normal Player
   account (no error is shown, per design).
+
+- **Super Admin** — a flag layered on top of the Admin role, not a separate
+  role, so a super admin is an admin with extra powers rather than a
+  different kind of account. Only a super admin can delete messages in the
+  staff chat (individually or all at once), and a super admin cannot be
+  demoted by a role vote. Granted at signup via `SUPER_ADMIN_CODE`, or to an
+  existing account by running `supabase/promote_super_admin.sql`.
 
 Admins manage co-admins from `/admin`, which is only reachable by signed-in
 admins.

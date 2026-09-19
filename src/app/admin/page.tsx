@@ -23,7 +23,12 @@ import { SlideManager } from "@/components/slides/SlideManager";
 import { PendingSlideRequestList } from "@/components/slides/PendingSlideRequestList";
 import { MySlideProposalsList } from "@/components/slides/MySlideProposalsList";
 import { ChatPanel } from "@/components/chat/ChatPanel";
-import { getStaffMessages, sendStaffMessage } from "@/app/actions/chat";
+import {
+  getStaffMessages,
+  sendStaffMessage,
+  deleteStaffMessage,
+  clearStaffChat,
+} from "@/app/actions/chat";
 
 export default async function AdminPage() {
   const currentUser = await getCurrentUser();
@@ -35,6 +40,7 @@ export default async function AdminPage() {
   }
 
   const isAdmin = currentUser.role === "ADMIN";
+  const isSuperAdmin = currentUser.isSuperAdmin;
 
   const [
     users,
@@ -86,6 +92,7 @@ export default async function AdminPage() {
               id={u.id}
               username={u.username}
               role={u.role}
+              isSuperAdmin={u.isSuperAdmin}
               createdAt={u.createdAt}
               canManage={isAdmin}
             />
@@ -159,11 +166,16 @@ export default async function AdminPage() {
       <h2 className="text-lg font-semibold text-white">Staff Chat</h2>
       <p className="mt-1 text-sm text-stone-400">
         Visible to admins and co-admins only.
+        {isSuperAdmin
+          ? " As a super admin, you can delete messages here."
+          : ""}
       </p>
       <div className="mt-4">
         <ChatPanel
           fetchAction={getStaffMessages}
           sendAction={sendStaffMessage}
+          deleteAction={isSuperAdmin ? deleteStaffMessage : undefined}
+          clearAction={isSuperAdmin ? clearStaffChat : undefined}
           theme="dark"
         />
       </div>

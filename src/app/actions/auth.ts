@@ -31,7 +31,16 @@ export async function signUp(
     return { error: "Passwords do not match." };
   }
 
-  const isAdmin = adminCode.length > 0 && adminCode === process.env.ADMIN_CODE;
+  // A super admin is an admin carrying an extra flag, bootstrapped by its
+  // own code the same way ADMIN_CODE bootstraps a plain admin. The flag is
+  // what grants destructive powers (e.g. deleting staff chat); the role
+  // stays "ADMIN" so every existing role check keeps working.
+  const isSuperAdmin =
+    Boolean(process.env.SUPER_ADMIN_CODE) &&
+    adminCode.length > 0 &&
+    adminCode === process.env.SUPER_ADMIN_CODE;
+  const isAdmin =
+    isSuperAdmin || (adminCode.length > 0 && adminCode === process.env.ADMIN_CODE);
   const email = usernameToEmail(username);
 
   const adminClient = createAdminClient();
@@ -42,6 +51,7 @@ export async function signUp(
     app_metadata: {
       username,
       role: isAdmin ? "ADMIN" : "USER",
+      super_admin: isSuperAdmin,
     },
   });
 
