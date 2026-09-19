@@ -14,6 +14,7 @@ import {
 } from "@/lib/slides";
 import { AdminUserRow } from "@/components/AdminUserRow";
 import { AdminTabs } from "@/components/admin/AdminTabs";
+import { SuperAdminClaimPanel } from "@/components/admin/SuperAdminClaimPanel";
 import { RoleNominationPanel } from "@/components/governance/RoleNominationPanel";
 import { VoteNotificationList } from "@/components/notifications/VoteNotificationList";
 import { CardManager } from "@/components/cards/CardManager";
@@ -108,6 +109,7 @@ export default async function AdminPage() {
 
   const notificationsTabContent = (
     <div className="flex flex-col gap-8">
+      {isAdmin && !isSuperAdmin && <SuperAdminClaimPanel />}
       <div>
         <h2 className="text-lg font-semibold text-white">
           Votes Needing Your Agreement

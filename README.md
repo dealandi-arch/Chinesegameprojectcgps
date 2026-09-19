@@ -24,7 +24,9 @@ A Chinese cooking game project, built with [Next.js](https://nextjs.org) and [Su
      the "Create Profile" form. Ask the project owner for the real value;
      never commit it.
    - `SUPER_ADMIN_CODE` — optional. Same field on the same form, but grants
-     super admin (see below). Leave it unset to disable super-admin signup.
+     super admin (see below). If unset, the app falls back to a default
+     code committed in `src/app/actions/auth.ts` — fine for local
+     development, but set a real value for anything publicly reachable.
 
 3. Run the development server:
 

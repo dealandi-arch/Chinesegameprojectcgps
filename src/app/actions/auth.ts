@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { usernameToEmail } from "@/lib/username";
+import { resolveSuperAdminCode } from "@/lib/auth";
 
 export type AuthFormState = { error: string } | null;
 
@@ -36,9 +37,7 @@ export async function signUp(
   // what grants destructive powers (e.g. deleting staff chat); the role
   // stays "ADMIN" so every existing role check keeps working.
   const isSuperAdmin =
-    Boolean(process.env.SUPER_ADMIN_CODE) &&
-    adminCode.length > 0 &&
-    adminCode === process.env.SUPER_ADMIN_CODE;
+    adminCode.length > 0 && adminCode === resolveSuperAdminCode();
   const isAdmin =
     isSuperAdmin || (adminCode.length > 0 && adminCode === process.env.ADMIN_CODE);
   const email = usernameToEmail(username);

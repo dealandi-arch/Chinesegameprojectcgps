@@ -24,6 +24,18 @@ export function readIsSuperAdmin(appMetadata: unknown): boolean {
   return (appMetadata as UserAppMetadata | null)?.super_admin === true;
 }
 
+// Fallback used when SUPER_ADMIN_CODE isn't set in the environment. It
+// ships in the source, so treat it as a local-development convenience
+// only -- anyone who can read the repo can use it to grant themselves
+// super admin. Set SUPER_ADMIN_CODE in any deployment to override it.
+const DEFAULT_SUPER_ADMIN_CODE = "67";
+
+// Single source of truth for the code, shared by signup and the
+// claim-from-the-admin-panel path so the two can never drift apart.
+export function resolveSuperAdminCode(): string {
+  return process.env.SUPER_ADMIN_CODE || DEFAULT_SUPER_ADMIN_CODE;
+}
+
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   const supabase = await createClient();
   // getUser() re-validates against Supabase Auth on every call (unlike
